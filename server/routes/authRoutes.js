@@ -23,10 +23,15 @@ router.get(
 const {
   registerUser,
   loginUser,
+  updateUserProfile,
+  updateUserPassword,
 } = require("../controllers/authController");
 
 router.post("/register", registerUser);
-
 router.post("/login", loginUser);
+
+// Profile and security updates
+router.put("/profile", protect, updateUserProfile);
+router.put("/password", protect, updateUserPassword);
 
 module.exports = router;

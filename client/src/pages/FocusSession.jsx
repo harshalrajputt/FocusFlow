@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { logFocusSession, getFocusSummary } from "../services/focusService";
+import { getTasks } from "../services/taskService";
 
 const MODES = [
     {
@@ -20,10 +22,160 @@ const MODES = [
 
 const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
 
+// Post-Session Feedback Modal (Phase 3 Adherence & Ratings)
+const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
+    const [rating, setRating] = useState(3);
+    const [difficulty, setDifficulty] = useState("Normal");
+    const [followedSchedule, setFollowedSchedule] = useState(true);
+    const [missedTask, setMissedTask] = useState(false);
+    const [delayedTask, setDelayedTask] = useState(false);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-md p-6 rounded-2xl border border-slate-800 bg-[#0d1526] shadow-2xl space-y-5">
+                <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 mb-3 text-xl">
+                        {isCompleted ? "🏆" : "⚠️"}
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-100">
+                        {isCompleted ? "Session Complete!" : "Session Stopped"}
+                    </h2>
+                    <p className="text-slate-500 text-xs mt-1">Reflect on your focus to improve your scheduling profile.</p>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Rating */}
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5 text-center">
+                            Focus Rating (1 - 5 stars)
+                        </label>
+                        <div className="flex justify-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setRating(star)}
+                                    className="text-2xl transition-transform hover:scale-110 cursor-pointer"
+                                >
+                                    {star <= rating ? "★" : "☆"}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Difficulty */}
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                            How difficult was it to focus?
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {["Easy", "Normal", "Difficult"].map((diff) => (
+                                <button
+                                    key={diff}
+                                    type="button"
+                                    onClick={() => setDifficulty(diff)}
+                                    className={`py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border cursor-pointer ${
+                                        difficulty === diff
+                                        ? 'bg-violet-600/15 border-violet-500 text-violet-300'
+                                        : 'bg-[#0a1628] border-slate-800 text-slate-400'
+                                    }`}
+                                >
+                                    {diff}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Adherence Checkboxes */}
+                    <div className="space-y-2 border-t border-slate-800/40 pt-4">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+                            Schedule Adherence
+                        </label>
+                        
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                            <input
+                                type="checkbox"
+                                checked={followedSchedule}
+                                onChange={(e) => setFollowedSchedule(e.target.checked)}
+                                className="accent-violet-500 h-4 w-4 rounded"
+                            />
+                            <div className="text-xs text-slate-300">
+                                <p className="font-semibold">Followed scheduled slot</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">I am studying when scheduled.</p>
+                            </div>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                            <input
+                                type="checkbox"
+                                checked={missedTask}
+                                onChange={(e) => setMissedTask(e.target.checked)}
+                                className="accent-violet-500 h-4 w-4 rounded"
+                            />
+                            <div className="text-xs text-slate-300">
+                                <p className="font-semibold">Missed a task earlier today</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">I skipped some scheduled study periods.</p>
+                            </div>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                            <input
+                                type="checkbox"
+                                checked={delayedTask}
+                                onChange={(e) => setDelayedTask(e.target.checked)}
+                                className="accent-violet-500 h-4 w-4 rounded"
+                            />
+                            <div className="text-xs text-slate-300">
+                                <p className="font-semibold">Task was delayed</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">I started studying later than planned.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 text-slate-400 text-xs font-semibold cursor-pointer"
+                    >
+                        Skip Feedback
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onSubmit({ rating, difficulty, followedSchedule, missedTask, delayedTask })}
+                        className="flex-1 py-2.5 rounded-xl text-white text-xs font-semibold cursor-pointer"
+                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                    >
+                        Submit & Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const FocusSession = () => {
     const [modeIdx, setModeIdx] = useState(0);
     const [running, setRunning] = useState(false);
     const [elapsed, setElapsed] = useState(0);
+    const [tasks, setTasks] = useState([]);
+    const [selectedTaskId, setSelectedTaskId] = useState("");
+    const [startTime, setStartTime] = useState(null);
+    const [summary, setSummary] = useState({
+        sessionsToday: 0,
+        totalFocusMinutes: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+    });
+
+    // Behavioral Tracking states (Phase 3)
+    const [pauseCount, setPauseCount] = useState(0);
+    const [interruptions, setInterruptions] = useState(0);
+    const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+    const [pendingSession, setPendingSession] = useState(null);
 
     const mode = MODES[modeIdx];
     const total = mode.duration * 60;
@@ -36,15 +188,211 @@ const FocusSession = () => {
     const circ = 2 * Math.PI * R;
     const dash = circ - progress * circ;
 
-    const switchMode = (i) => { setModeIdx(i); setRunning(false); setElapsed(0); };
+    const fetchTasks = async () => {
+        try {
+            const res = await getTasks();
+            const activeTasks = (res.data.tasks || []).filter(
+                (t) => t.status === "Pending" || t.status === "In Progress"
+            );
+            setTasks(activeTasks);
+        } catch (error) {
+            console.error("Error fetching tasks for focus timer", error);
+        }
+    };
+
+    const fetchSummary = async () => {
+        try {
+            const res = await getFocusSummary();
+            if (res.data.success) {
+                setSummary({
+                    sessionsToday: res.data.sessionsToday || 0,
+                    totalFocusMinutes: res.data.totalFocusMinutes || 0,
+                    currentStreak: res.data.currentStreak || 0,
+                    bestStreak: res.data.bestStreak || 0,
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching focus summary", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchSummary();
+        fetchTasks();
+    }, []);
+
+    // Phase 3: Submit session logs with behavioral metrics
+    const saveSessionWithFeedback = async (feedbackData = {}) => {
+        if (!pendingSession) return;
+
+        try {
+            const payload = {
+                taskId: selectedTaskId || null,
+                sessionType: pendingSession.sessionType,
+                duration: pendingSession.duration,
+                startTime: pendingSession.startTime,
+                endTime: pendingSession.endTime,
+                completed: pendingSession.completed,
+                interruptions,
+                pauseCount,
+                followedSchedule: feedbackData.followedSchedule !== undefined ? feedbackData.followedSchedule : true,
+                missedTask: feedbackData.missedTask || false,
+                delayedTask: feedbackData.delayedTask || false,
+                difficultyRating: feedbackData.rating || 3,
+                difficultyFeedback: feedbackData.difficulty || "Normal"
+            };
+
+            await logFocusSession(payload);
+            
+            // Clean up session states
+            setElapsed(0);
+            setStartTime(null);
+            setPauseCount(0);
+            setInterruptions(0);
+            setPendingSession(null);
+            setFeedbackModalOpen(false);
+
+            fetchSummary();
+        } catch (error) {
+            console.error("Error logging focus session with feedback", error);
+        }
+    };
+
+    // Modal skip (save with defaults)
+    const handleSkipFeedback = () => {
+        saveSessionWithFeedback();
+    };
+
+    const handleSessionComplete = (durationSecs) => {
+        const currentMode = MODES[modeIdx];
+        const end = new Date();
+        const start = startTime || new Date(end.getTime() - durationSecs * 1000);
+
+        setPendingSession({
+            sessionType: currentMode.label,
+            duration: durationSecs,
+            startTime: start,
+            endTime: end,
+            completed: true
+        });
+
+        // Open feedback modal for Focus sessions, else log break directly
+        if (currentMode.label === "Focus") {
+            setFeedbackModalOpen(true);
+        } else {
+            // Log breaks directly
+            logFocusSession({
+                taskId: null,
+                sessionType: currentMode.label,
+                duration: durationSecs,
+                startTime: start,
+                endTime: end,
+                completed: true
+            }).then(() => {
+                setElapsed(0);
+                setStartTime(null);
+                fetchSummary();
+            });
+        }
+    };
+
+    const logInterruptedSession = () => {
+        if (elapsed >= 10 && startTime && MODES[modeIdx].label === "Focus") {
+            const currentMode = MODES[modeIdx];
+            const end = new Date();
+            
+            setPendingSession({
+                sessionType: currentMode.label,
+                duration: elapsed,
+                startTime: startTime,
+                endTime: end,
+                completed: false
+            });
+            setFeedbackModalOpen(true);
+        } else {
+            // Just clear timer
+            setElapsed(0);
+            setStartTime(null);
+            setPauseCount(0);
+            setInterruptions(0);
+        }
+    };
+
+    useEffect(() => {
+        let timer = null;
+        if (running) {
+            if (!startTime) {
+                setStartTime(new Date());
+            }
+            timer = setInterval(() => {
+                setElapsed((prev) => {
+                    const nextElapsed = prev + 1;
+                    const mode = MODES[modeIdx];
+                    const total = mode.duration * 60;
+                    if (nextElapsed >= total) {
+                        clearInterval(timer);
+                        setRunning(false);
+                        handleSessionComplete(total);
+                        return total;
+                    }
+                    return nextElapsed;
+                });
+            }, 1000);
+        } else {
+            clearInterval(timer);
+        }
+        return () => clearInterval(timer);
+    }, [running, modeIdx, startTime, selectedTaskId]);
+
+    const handlePlayPause = () => {
+        if (running) {
+            setPauseCount(prev => prev + 1);
+        }
+        setRunning(!running);
+    };
+
+    const switchMode = (i) => {
+        if (running) {
+            logInterruptedSession();
+        }
+        setModeIdx(i);
+        setRunning(false);
+        setElapsed(0);
+        setStartTime(null);
+    };
+
+    const handleReset = () => {
+        if (running) {
+            logInterruptedSession();
+        } else {
+            setElapsed(0);
+            setStartTime(null);
+            setPauseCount(0);
+            setInterruptions(0);
+        }
+        setRunning(false);
+    };
+
+    const handleSkip = () => {
+        if (running) {
+            logInterruptedSession();
+        } else {
+            setElapsed(0);
+            setStartTime(null);
+            setPauseCount(0);
+            setInterruptions(0);
+        }
+        setRunning(false);
+        setModeIdx((modeIdx + 1) % MODES.length);
+    };
 
     return (
         <div className="p-6 md:p-8 max-w-2xl mx-auto w-full space-y-8">
-
+            
             {/* Header */}
             <div className="animate-fade-in-up">
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100">Focus Session</h1>
-                <p className="text-slate-600 text-sm mt-1">Deep work using the Pomodoro technique</p>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100">Focus Timer ⏱️</h1>
+                <p className="text-slate-600 text-sm mt-1">Deep study using the Pomodoro technique with behavioral tracking</p>
             </div>
 
             {/* Mode selector */}
@@ -53,7 +401,7 @@ const FocusSession = () => {
                     <button
                         key={m.label}
                         onClick={() => switchMode(i)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-200"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
                         style={modeIdx === i
                             ? { background: `${m.ringColor}22`, color: m.ringColor, border: `1px solid ${m.ringColor}40` }
                             : { background: 'transparent', color: '#475569', border: '1px solid transparent' }
@@ -103,7 +451,7 @@ const FocusSession = () => {
                         <span className="font-mono font-bold text-slate-100 text-5xl tracking-tight">{mins}:{secs}</span>
                         <span className="text-slate-600 text-sm mt-1 font-medium">{mode.label}</span>
                         {running && (
-                            <span className="text-xs mt-2 font-semibold animate-pulse-dot" style={{ color: mode.ringColor }}>● Live</span>
+                            <span className="text-xs mt-2 font-semibold animate-pulse" style={{ color: mode.ringColor }}>● Live</span>
                         )}
                     </div>
                 </div>
@@ -112,8 +460,8 @@ const FocusSession = () => {
                 <div className="flex items-center gap-5">
                     {/* Reset */}
                     <button
-                        onClick={() => { setElapsed(0); setRunning(false); }}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200"
+                        onClick={handleReset}
+                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200 cursor-pointer"
                         style={{ background: '#0d1526', border: '1px solid rgba(148,163,184,0.1)' }}
                         onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'; }}
@@ -123,8 +471,8 @@ const FocusSession = () => {
 
                     {/* Play/Pause */}
                     <button
-                        onClick={() => setRunning(!running)}
-                        className="w-[70px] h-[70px] flex items-center justify-center rounded-full text-white transition-all duration-200"
+                        onClick={handlePlayPause}
+                        className="w-[70px] h-[70px] flex items-center justify-center rounded-full text-white transition-all duration-200 cursor-pointer"
                         style={{
                             background: `linear-gradient(135deg, ${mode.ringColor}, ${mode.ringColor === '#7c3aed' ? '#4f46e5' : mode.ringColor === '#10b981' ? '#0d9488' : '#2563eb'})`,
                             boxShadow: `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`,
@@ -141,8 +489,8 @@ const FocusSession = () => {
 
                     {/* Skip */}
                     <button
-                        onClick={() => switchMode((modeIdx + 1) % MODES.length)}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200"
+                        onClick={handleSkip}
+                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200 cursor-pointer"
                         style={{ background: '#0d1526', border: '1px solid rgba(148,163,184,0.1)' }}
                         onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'; }}
@@ -152,12 +500,46 @@ const FocusSession = () => {
                 </div>
             </div>
 
+            {/* Distraction logging button (Phase 3) */}
+            {running && mode.label === "Focus" && (
+                <div className="flex justify-center animate-fade-in">
+                    <button
+                        type="button"
+                        onClick={() => setInterruptions(prev => prev + 1)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-red-500/25 bg-red-500/5 hover:bg-red-500/10 text-red-400 text-xs font-semibold tracking-wider transition-colors cursor-pointer"
+                    >
+                        ⚡ Log Distraction ({interruptions})
+                    </button>
+                </div>
+            )}
+
+            {/* Task Selector */}
+            <div className="flex flex-col gap-2 animate-fade-in-up delay-2 max-w-sm mx-auto w-full">
+                <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 text-center">
+                    Focus Target Task
+                </label>
+                <select
+                    value={selectedTaskId}
+                    onChange={(e) => setSelectedTaskId(e.target.value)}
+                    className="w-full bg-[#0a1628] border border-slate-800 rounded-xl text-slate-200 text-sm outline-none px-4 py-3 cursor-pointer transition-all duration-200"
+                    onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.6)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)'; }}
+                    onBlur={e => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; }}
+                >
+                    <option value="">General Focus / No Task Selected</option>
+                    {tasks.map(t => (
+                        <option key={t._id} value={t._id}>
+                            {t.title} ({t.priority})
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             {/* Session Stats */}
             <div className="grid grid-cols-3 gap-3 animate-fade-in-up delay-3">
                 {[
-                    { label: "Sessions Today", value: "0" },
-                    { label: "Total Focus", value: "0m" },
-                    { label: "Best Streak", value: "0" },
+                    { label: "Sessions Today", value: String(summary.sessionsToday) },
+                    { label: "Total Focus", value: `${summary.totalFocusMinutes}m` },
+                    { label: "Best Streak", value: String(summary.bestStreak) },
                 ].map(s => (
                     <div key={s.label} className="rounded-xl text-center py-4 px-3" style={cardStyle}>
                         <p className="text-2xl font-bold text-slate-100">{s.value}</p>
@@ -165,6 +547,14 @@ const FocusSession = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Feedback Modal Overlay */}
+            <PostSessionModal
+                isOpen={feedbackModalOpen}
+                isCompleted={pendingSession?.completed}
+                onClose={handleSkipFeedback}
+                onSubmit={saveSessionWithFeedback}
+            />
         </div>
     );
 };

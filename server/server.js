@@ -6,6 +6,12 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const focusRoutes = require("./routes/focusRoutes");
+const goalRoutes = require("./routes/goalRoutes");
+const userProfileRoutes = require("./routes/userProfileRoutes");
+const scheduleRoutes = require("./routes/scheduleRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 
@@ -20,6 +26,12 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/focus", focusRoutes);
+app.use("/api/goals", goalRoutes);
+app.use("/api/profile", userProfileRoutes);
+app.use("/api/schedule", scheduleRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 const PORT = process.env.PORT || 5000;
 

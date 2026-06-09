@@ -16,6 +16,27 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: true
+        },
+
+        timezone: {
+            type: String,
+            default: "UTC+05:30 — India"
+        },
+
+        settings: {
+            notifications: {
+                sessionReminders: { type: Boolean, default: true },
+                taskDueAlerts:    { type: Boolean, default: true },
+                weeklySummary:     { type: Boolean, default: false },
+                breakReminders:   { type: Boolean, default: true },
+                soundEffects:     { type: Boolean, default: true }
+            },
+            appearance: {
+                theme:          { type: String, default: "Dark (default)" },
+                compactSidebar: { type: Boolean, default: false },
+                reduceMotion:   { type: Boolean, default: false },
+                denseLayout:    { type: Boolean, default: false }
+            }
         }
     },
     {

@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "FocusFlow Companion",
+  "version": "1.0.0",
+  "description": "Chrome extension companion for FocusFlow. Syncs timers and blocks distracting sites.",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "http://localhost:5173/*",
+    "http://localhost:5174/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}

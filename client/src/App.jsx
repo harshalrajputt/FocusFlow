@@ -12,6 +12,8 @@ import Tasks from "./pages/Tasks";
 import FocusSession from "./pages/FocusSession";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Onboarding from "./pages/Onboarding";
+import Schedule from "./pages/Schedule";
 
 function App() {
   return (
@@ -34,6 +36,10 @@ function App() {
         />
 
         <Route element={<ProtectedRoute />}>
+          <Route
+            path="/onboarding"
+            element={<Onboarding />}
+          />
           <Route element={<MainLayout />}>
 
             <Route
@@ -59,6 +65,11 @@ function App() {
             <Route
               path="/settings"
               element={<Settings />}
+            />
+
+            <Route
+              path="/schedule"
+              element={<Schedule />}
             />
 
           </Route>

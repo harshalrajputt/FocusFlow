@@ -1,22 +1,181 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import TaskList  from "../components/tasks/TaskList";
+import TaskModal from "../components/tasks/TaskModal";
+import { getTasks, createTask, updateTask, deleteTask } from "../services/taskService";
+
+const STATUS_FILTERS = ["All", "Pending", "In Progress", "Completed"];
+const PRIORITY_FILTERS = ["All Priorities", "High", "Medium", "Low"];
 
 const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
-const filterTabs = ["All", "Today", "In Progress", "Completed"];
 
-const Tasks = () => {
-    const [active, setActive] = useState(0);
+// Confirmation dialog
+function ConfirmDialog({ open, onConfirm, onCancel }) {
+    if (!open) return null;
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(2,8,23,0.85)', backdropFilter: 'blur(8px)' }}
+        >
+            <div
+                className="w-full max-w-sm animate-fade-in-up rounded-2xl p-6"
+                style={{ background: '#0d1526', border: '1px solid rgba(239,68,68,0.2)', boxShadow: '0 32px 64px rgba(0,0,0,0.7)' }}
+            >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </div>
+                <h3 className="text-slate-100 font-bold text-center text-lg mb-1">Delete Task?</h3>
+                <p className="text-slate-500 text-sm text-center mb-6">This action cannot be undone.</p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-500 transition-all"
+                        style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.1)' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                        style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', boxShadow: '0 4px 16px rgba(239,68,68,0.3)' }}
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Toast notification
+function Toast({ toast }) {
+    if (!toast) return null;
+    const colors = {
+        success: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', color: '#34d399' },
+        error:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.25)',  color: '#f87171' },
+    };
+    const c = colors[toast.type] || colors.success;
+    return (
+        <div
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in-up"
+            style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color, backdropFilter: 'blur(12px)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxWidth: 320 }}
+        >
+            {toast.type === 'success'
+                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            }
+            {toast.message}
+        </div>
+    );
+}
+
+export default function Tasks() {
+    const [tasks,      setTasks]      = useState([]);
+    const [loading,    setLoading]    = useState(true);
+    const [saving,     setSaving]     = useState(false);
+    const [modalOpen,  setModalOpen]  = useState(false);
+    const [editTask,   setEditTask]   = useState(null);
+    const [deleteId,   setDeleteId]   = useState(null);
+    const [toast,      setToast]      = useState(null);
+    const [search,     setSearch]     = useState("");
+    const [statusFilter,   setStatusFilter]   = useState("All");
+    const [priorityFilter, setPriorityFilter] = useState("All Priorities");
+
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const fetchTasks = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = {};
+            if (statusFilter !== "All")             params.status   = statusFilter;
+            if (priorityFilter !== "All Priorities") params.priority = priorityFilter;
+            const res = await getTasks(params);
+            setTasks(res.data.tasks || []);
+        } catch {
+            showToast("Failed to load tasks", "error");
+        } finally {
+            setLoading(false);
+        }
+    }, [statusFilter, priorityFilter]);
+
+    useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+    // Client-side search filter
+    const filtered = tasks.filter(t =>
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        (t.description || "").toLowerCase().includes(search.toLowerCase())
+    );
+
+    const handleOpenCreate = () => { setEditTask(null); setModalOpen(true); };
+    const handleOpenEdit   = (task) => { setEditTask(task); setModalOpen(true); };
+    const handleCloseModal = () => { setModalOpen(false); setEditTask(null); };
+
+    const handleSubmit = async (formData) => {
+        setSaving(true);
+        try {
+            if (editTask) {
+                await updateTask(editTask._id, formData);
+                showToast("Task updated successfully");
+            } else {
+                await createTask(formData);
+                showToast("Task created successfully");
+            }
+            handleCloseModal();
+            fetchTasks();
+        } catch (err) {
+            showToast(err.response?.data?.message || "Something went wrong", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await updateTask(id, { status: newStatus });
+            setTasks(prev => prev.map(t => t._id === id ? { ...t, status: newStatus } : t));
+        } catch {
+            showToast("Failed to update status", "error");
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await deleteTask(deleteId);
+            setTasks(prev => prev.filter(t => t._id !== deleteId));
+            showToast("Task deleted");
+        } catch {
+            showToast("Failed to delete task", "error");
+        } finally {
+            setDeleteId(null);
+        }
+    };
+
+    // Stats
+    const stats = {
+        total:      tasks.length,
+        completed:  tasks.filter(t => t.status === "Completed").length,
+        inProgress: tasks.filter(t => t.status === "In Progress").length,
+        overdue:    tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Completed").length,
+    };
 
     return (
         <div className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-6">
 
-            {/* Header */}
+            {/* ── Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100">Tasks</h1>
-                    <p className="text-slate-600 text-sm mt-1">Manage and track your work items</p>
+                    <p className="text-slate-600 text-sm mt-1">
+                        {stats.total > 0
+                            ? `${stats.completed} of ${stats.total} tasks completed`
+                            : "Manage and track your work items"}
+                    </p>
                 </div>
                 <button
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all duration-200"
+                    onClick={handleOpenCreate}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all duration-200 whitespace-nowrap"
                     style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}
                     onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(124,58,237,0.5)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(124,58,237,0.3)'; e.currentTarget.style.transform = ''; }}
@@ -26,72 +185,97 @@ const Tasks = () => {
                 </button>
             </div>
 
-            {/* Search + Filter */}
-            <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up delay-1">
+            {/* ── Mini Stats ── */}
+            {tasks.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 animate-fade-in-up delay-1">
+                    {[
+                        { label: "Total",       val: stats.total,      color: '#94a3b8' },
+                        { label: "In Progress", val: stats.inProgress, color: '#818cf8' },
+                        { label: "Completed",   val: stats.completed,  color: '#34d399' },
+                        { label: "Overdue",     val: stats.overdue,    color: stats.overdue > 0 ? '#f87171' : '#475569' },
+                    ].map(s => (
+                        <div key={s.label} className="rounded-xl p-3 text-center" style={cardStyle}>
+                            <p className="text-xl font-bold" style={{ color: s.color }}>{s.val}</p>
+                            <p className="text-slate-700 text-[11px] mt-0.5">{s.label}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* ── Search + Priority filter ── */}
+            <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up delay-2">
                 <div className="relative flex-1">
-                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input
-                        type="text" placeholder="Search tasks…"
+                        type="text"
+                        placeholder="Search tasks…"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl text-slate-200 text-sm placeholder-slate-600 outline-none transition-all"
                         style={cardStyle}
                         onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)'; }}
                         onBlur={e => { e.target.style.borderColor = 'rgba(148,163,184,0.07)'; e.target.style.boxShadow = ''; }}
                     />
                 </div>
-                <button
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-slate-500 text-sm font-medium transition-all"
-                    style={cardStyle}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.14)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.07)'; }}
+                <select
+                    value={priorityFilter}
+                    onChange={e => setPriorityFilter(e.target.value)}
+                    className="px-4 py-2.5 rounded-xl text-slate-400 text-sm font-medium outline-none transition-all"
+                    style={{ ...cardStyle, cursor: 'pointer', minWidth: 150, fontFamily: 'inherit' }}
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                    Filter
-                </button>
+                    {PRIORITY_FILTERS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 rounded-xl p-1 animate-fade-in-up delay-2" style={cardStyle}>
-                {filterTabs.map((tab, i) => (
+            {/* ── Status Tabs ── */}
+            <div className="flex gap-1 rounded-xl p-1 animate-fade-in-up delay-3" style={cardStyle}>
+                {STATUS_FILTERS.map(f => (
                     <button
-                        key={tab}
-                        onClick={() => setActive(i)}
-                        className="flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200"
-                        style={active === i
+                        key={f}
+                        onClick={() => setStatusFilter(f)}
+                        className="flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200"
+                        style={statusFilter === f
                             ? { background: 'rgba(124,58,237,0.18)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.25)' }
                             : { background: 'transparent', color: '#475569', border: '1px solid transparent' }
                         }
                     >
-                        {tab}
+                        {f}
+                        {f !== "All" && tasks.length > 0 && (
+                            <span className="ml-1.5 opacity-60">
+                                ({tasks.filter(t => t.status === f).length})
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
 
-            {/* Task List / Empty State */}
-            <div className="rounded-2xl overflow-hidden animate-fade-in-up delay-3" style={cardStyle}>
-                <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                    <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                        style={{ background: 'rgba(148,163,184,0.05)', border: '1px solid rgba(148,163,184,0.08)' }}
-                    >
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    </div>
-                    <h3 className="text-slate-300 font-semibold text-lg mb-1">No tasks yet</h3>
-                    <p className="text-slate-600 text-sm max-w-xs">
-                        Add your first task to start tracking your productivity and stay focused.
-                    </p>
-                    <button
-                        className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all duration-200"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}
-                        onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 24px rgba(124,58,237,0.5)'}
-                        onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(124,58,237,0.3)'}
-                    >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Add First Task
-                    </button>
-                </div>
+            {/* ── Task List ── */}
+            <div className="animate-fade-in-up delay-4">
+                <TaskList
+                    tasks={filtered}
+                    loading={loading}
+                    onEdit={handleOpenEdit}
+                    onDelete={setDeleteId}
+                    onStatusChange={handleStatusChange}
+                />
             </div>
+
+            {/* ── Modals ── */}
+            <TaskModal
+                isOpen={modalOpen}
+                editTask={editTask}
+                onSubmit={handleSubmit}
+                onClose={handleCloseModal}
+                loading={saving}
+            />
+
+            <ConfirmDialog
+                open={!!deleteId}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setDeleteId(null)}
+            />
+
+            <Toast toast={toast} />
         </div>
     );
-};
-
-export default Tasks;
+}
