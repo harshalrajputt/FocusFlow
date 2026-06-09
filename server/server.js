@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const connectDB = require("./config/db");
 
@@ -23,6 +24,11 @@ app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("FocusFlow API Running");
+});
+
+app.get("/api/download-extension", (req, res) => {
+    const filePath = path.join(__dirname, "extension.zip");
+    res.download(filePath, "focusflow-companion.zip");
 });
 
 app.use("/api/auth", authRoutes);

@@ -25,6 +25,10 @@ const SECTIONS = [
         id: "appearance", label: "Appearance",
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     },
+    {
+        id: "extension", label: "Extension",
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-2-2h-3.18A5.5 5.5 0 0 0 12 2a5.5 5.5 0 0 0-3.82 4H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3.18A5.5 5.5 0 0 0 12 22a5.5 5.5 0 0 0 3.82-4H19a2 2 0 0 0 2-2z"/></svg>
+    }
 ];
 
 const Toggle = ({ checked, onChange }) => {
@@ -420,6 +424,93 @@ const Settings = () => {
                                 <Field label="Dense layout" hint="Fit more content on screen">
                                     <Toggle checked={appearance.denseLayout} onChange={() => handleToggleAppearance("denseLayout")} />
                                 </Field>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Extension */}
+                    {active === "extension" && (
+                        <div className="rounded-2xl overflow-hidden animate-fade-in-up" style={cardStyle}>
+                            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid rgba(148,163,184,0.07)', background: 'rgba(8,15,30,0.5)' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-2-2h-3.18A5.5 5.5 0 0 0 12 2a5.5 5.5 0 0 0-3.82 4H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3.18A5.5 5.5 0 0 0 12 22a5.5 5.5 0 0 0 3.82-4H19a2 2 0 0 0 2-2z"/></svg>
+                                <h2 className="text-slate-200 text-sm font-semibold">Browser Extension Companion</h2>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-[#0a1628]/60 border border-slate-800/60 rounded-2xl">
+                                    <div className="flex items-start gap-4">
+                                        <span className="text-3xl mt-0.5">🧩</span>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-200">FocusFlow Blocker Shield</h3>
+                                            <p className="text-slate-400 text-xs mt-1 leading-relaxed max-w-md">
+                                                Active tracking extension. Syncs with your dashboard tasks, logs focus times to your profile, and blocks distraction domains (YouTube, Instagram) automatically.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href="http://localhost:5000/api/download-extension"
+                                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-lg shadow-violet-500/15 whitespace-nowrap self-stretch sm:self-auto no-underline"
+                                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                                        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(124,58,237,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(124,58,237,0.15)'; e.currentTarget.style.transform = ''; }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        Download Blocker Extension
+                                    </a>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Crystal Clear Installation Guide</h3>
+                                    
+                                    <div className="relative border-l-2 border-violet-800/40 pl-6 ml-3 space-y-6">
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-violet-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">1</span>
+                                            <p className="text-xs font-bold text-slate-200">Download the Zip Bundle</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                Click the **Download Blocker Extension** button above. Save the file <code className="text-violet-400 font-mono">focusflow-companion.zip</code> to your computer.
+                                            </p>
+                                        </div>
+
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-violet-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">2</span>
+                                            <p className="text-xs font-bold text-slate-200">Extract the Archive</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                Right-click the downloaded zip file and select **Extract All...** to extract the folder. Keep a note of where you extracted it.
+                                            </p>
+                                        </div>
+
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-violet-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">3</span>
+                                            <p className="text-xs font-bold text-slate-200">Open Chrome Extension Manager</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                In your Google Chrome URL address bar, navigate to <code className="text-violet-400 font-mono">chrome://extensions/</code> or click **Extensions Manager** in your browser menu.
+                                            </p>
+                                        </div>
+
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-violet-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">4</span>
+                                            <p className="text-xs font-bold text-slate-200">Toggle "Developer Mode"</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                Turn on the **Developer mode** toggle switch in the top-right corner of the Extensions Manager screen.
+                                            </p>
+                                        </div>
+
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-violet-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">5</span>
+                                            <p className="text-xs font-bold text-slate-200">Load the Unpacked Folder</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                Click the **Load unpacked** button in the top-left corner. In the file explorer, select the folder containing your extracted extension files (ensure you select the folder containing the <code className="text-violet-400 font-mono">manifest.json</code> file).
+                                            </p>
+                                        </div>
+
+                                        <div className="relative">
+                                            <span className="absolute -left-9 top-0.5 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-emerald-600 text-slate-100 text-[10px] font-black border-2 border-[#0d1526]">✓</span>
+                                            <p className="text-xs font-bold text-emerald-400">All Set! Connect Your Account</p>
+                                            <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                                                Open the extension popup in your extensions bar, enter your FocusFlow account details to log in, and sync with your target tasks list instantly!
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

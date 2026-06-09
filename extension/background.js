@@ -41,6 +41,12 @@ function checkAndBlockTab(tabId, url) {
             chrome.tabs.update(tabId, {
                 url: chrome.runtime.getURL("block.html")
             });
+            // Increment distraction count in storage
+            chrome.storage.local.get("sessionMetrics", (res) => {
+                const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
+                metrics.interruptions = (metrics.interruptions || 0) + 1;
+                chrome.storage.local.set({ sessionMetrics: metrics });
+            });
         }
     } catch (e) {
         // Ignore invalid URLs (like chrome:// settings)

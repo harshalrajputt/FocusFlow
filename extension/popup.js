@@ -219,6 +219,11 @@ function startTimer() {
     startTimeStamp = Date.now();
     statusDisplay.innerText = currentModeIdx === 0 ? "⚡ Distraction blocker: active" : "Timer running";
 
+    // Reset session metrics if starting a fresh focus session
+    if (remainingSeconds === DURATIONS[currentModeIdx]) {
+        chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
+    }
+
     if (currentModeIdx === 0) {
         chrome.storage.local.get("token", (res) => {
             if (res.token) syncDistractionsBlocker(res.token);
@@ -250,6 +255,13 @@ function pauseTimer() {
     playBtn.innerText = "▶";
     statusDisplay.innerText = "Timer paused";
     
+    // Increment pause count in storage
+    chrome.storage.local.get("sessionMetrics", (res) => {
+        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
+        metrics.pauseCount = (metrics.pauseCount || 0) + 1;
+        chrome.storage.local.set({ sessionMetrics: metrics });
+    });
+
     // Stop distraction blocker
     chrome.runtime.sendMessage({ type: "STOP_FOCUS" });
     saveTimerState();
@@ -267,12 +279,13 @@ skipBtn.addEventListener("click", () => {
 async function handleTimerComplete() {
     pauseTimer();
     
-    chrome.storage.local.get("token", async (res) => {
+    chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
         if (!res.token) return;
 
         const duration = DURATIONS[currentModeIdx];
         const end = new Date();
         const start = new Date(end.getTime() - duration * 1000);
+        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
 
         try {
             await fetch(`${BACKEND_URL}/focus`, {
@@ -287,13 +300,21 @@ async function handleTimerComplete() {
                     duration,
                     startTime: start.toISOString(),
                     endTime: end.toISOString(),
-                    completed: true
+                    completed: true,
+                    interruptions: metrics.interruptions || 0,
+                    pauseCount: metrics.pauseCount || 0,
+                    followedSchedule: true,
+                    difficultyRating: 3,
+                    difficultyFeedback: "Normal"
                 })
             });
             statusDisplay.innerText = "Session completed and saved to FocusFlow!";
         } catch (err) {
             statusDisplay.innerText = "Session completed (failed to sync)";
         }
+
+        // Reset metrics in storage
+        chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
     });
 
     alert(`${MODE_NAMES[currentModeIdx]} finished!`);
