@@ -1,0 +1,23 @@
+# Node / Web dependencies
+node_modules/
+dist/
+build/
+.env
+*.log
+
+# Python / Machine learning dependencies
+venv/
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE config folders
+.vscode/
+.idea/
+.gemini/
