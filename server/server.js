@@ -13,6 +13,8 @@ const goalRoutes = require("./routes/goalRoutes");
 const userProfileRoutes = require("./routes/userProfileRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const websiteUsageRoutes = require("./routes/websiteUsageRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -38,6 +40,8 @@ app.use("/api/goals", goalRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/schedule", scheduleRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/website-usage", websiteUsageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const PORT = process.env.PORT || 5000;
 

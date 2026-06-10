@@ -32,6 +32,8 @@ let startTimeStamp = null;
 chrome.storage.local.get(["token", "timerState"], (result) => {
     if (result.token) {
         showTimerScreen(result.token);
+        // Force background script to flush active telemetry to the server
+        chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
     } else {
         showAuthScreen();
     }

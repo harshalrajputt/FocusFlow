@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 
 const inputStyle = {
     width: '100%',
-    background: '#0a1628',
-    border: '1px solid rgba(148,163,184,0.12)',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
     borderRadius: 12,
-    color: '#f1f5f9',
+    color: 'var(--text-primary)',
     fontSize: 14,
     padding: '10px 14px',
     outline: 'none',
@@ -16,8 +16,7 @@ const inputStyle = {
 const InputField = ({ label, required, children }) => (
     <div>
         <label
-            className="block text-[11px] font-semibold uppercase tracking-widest mb-2"
-            style={{ color: '#475569' }}
+            className="block text-[11px] font-semibold uppercase tracking-widest mb-2 text-[var(--text-muted)]"
         >
             {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
         </label>
@@ -61,11 +60,11 @@ export default function TaskForm({ initialData, onSubmit, onCancel, loading }) {
     };
 
     const focusStyle = (e) => {
-        e.target.style.borderColor = 'rgba(124,58,237,0.6)';
-        e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)';
+        e.target.style.borderColor = 'var(--accent-color)';
+        e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
     };
     const blurStyle = (e) => {
-        e.target.style.borderColor = 'rgba(148,163,184,0.12)';
+        e.target.style.borderColor = 'var(--border-color)';
         e.target.style.boxShadow = '';
     };
 
@@ -117,7 +116,7 @@ export default function TaskForm({ initialData, onSubmit, onCancel, loading }) {
                                 className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200"
                                 style={form.priority === p
                                     ? { background: `${priorityColors[p]}20`, color: priorityColors[p], border: `1px solid ${priorityColors[p]}50` }
-                                    : { background: 'rgba(148,163,184,0.05)', color: '#475569', border: '1px solid rgba(148,163,184,0.1)' }
+                                    : { background: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }
                                 }
                             >
                                 {p}
@@ -149,21 +148,17 @@ export default function TaskForm({ initialData, onSubmit, onCancel, loading }) {
                     name="dueDate"
                     value={form.dueDate}
                     onChange={handleChange}
-                    style={{ ...inputStyle, colorScheme: 'dark' }}
+                    style={inputStyle}
                     onFocus={focusStyle}
                     onBlur={blurStyle}
                 />
             </InputField>
 
-            {/* Actions */}
             <div className="flex gap-3 pt-2">
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                    style={{ background: 'rgba(148,163,184,0.06)', color: '#64748b', border: '1px solid rgba(148,163,184,0.1)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.18)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'; }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] cursor-pointer"
                 >
                     Cancel
                 </button>
@@ -172,8 +167,8 @@ export default function TaskForm({ initialData, onSubmit, onCancel, loading }) {
                     disabled={loading || !form.title.trim()}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all"
                     style={{
-                        background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                        boxShadow: '0 4px 16px rgba(124,58,237,0.3)',
+                        background: 'var(--accent-gradient)',
+                        boxShadow: '0 4px 16px var(--accent-glow)',
                         opacity: loading || !form.title.trim() ? 0.6 : 1,
                         cursor: loading || !form.title.trim() ? 'not-allowed' : 'pointer',
                     }}

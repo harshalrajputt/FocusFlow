@@ -23,6 +23,13 @@ class PredictionRequest(BaseModel):
     distractions_count: int
     energy_level: int  # 1-10
     history: List[SessionHistoryItem]
+    # Telemetry Spends
+    productive_time_weekly: Optional[float] = 0.0
+    distracting_time_weekly: Optional[float] = 0.0
+    neutral_time_weekly: Optional[float] = 0.0
+    productive_time_monthly: Optional[float] = 0.0
+    distracting_time_monthly: Optional[float] = 0.0
+    neutral_time_monthly: Optional[float] = 0.0
 
 def time_to_mins(time_str: str) -> int:
     try:
@@ -168,6 +175,16 @@ def predict_focus(req: PredictionRequest):
         completion_prob = float(clf.predict_proba(current_feat)[0][1])
         burnout_risk_score = float(reg.predict(current_feat)[0])
 
+        # Integrate telemetry parameters into the mathematical predictions
+        total_weekly_time = req.productive_time_weekly + req.distracting_time_weekly + req.neutral_time_weekly
+        if total_weekly_time > 0:
+            distraction_ratio = req.distracting_time_weekly / total_weekly_time
+            completion_prob -= distraction_ratio * 0.25
+            burnout_risk_score += distraction_ratio * 0.20 + (total_weekly_time / 360000.0) * 0.10
+
+        completion_prob = np.clip(completion_prob, 0.05, 0.95)
+        burnout_risk_score = np.clip(burnout_risk_score, 0.0, 1.0)
+
         # Optimize preferred session duration
         durations = [25, 45, 60, 90]
         best_dur_prob = -1.0
@@ -182,12 +199,34 @@ def predict_focus(req: PredictionRequest):
         # Confidence rating is proportional to history size
         confidence = float(np.clip(0.5 + (len(req.history) * 0.05), 0.5, 0.95))
 
+        # Generate personalized AI Tips
+        tips = []
+        prod_w_min = req.productive_time_weekly / 60
+        dist_w_min = req.distracting_time_weekly / 60
+
+        if dist_w_min > prod_w_min and dist_w_min > 0:
+            tips.append("Distraction ratio alert: You spent more time on distracting sites than productive platforms this week. Lock down those sites!")
+        elif prod_w_min > 120:
+            tips.append("Awesome focus! Your productive coding/study web activity has surpassed 2 hours this week.")
+
+        if dist_w_min > 180:
+            tips.append(f"Weekly Warning: You spent {round(dist_w_min/60, 1)}h on YouTube/Social Media. Consider blocking these during slots.")
+
+        if req.energy_level < 5:
+            tips.append("Low energy detected. Consider breaking study sessions into shorter 25m Pomodoro slots.")
+        elif req.energy_level >= 8 and req.session_duration < 45:
+            tips.append("High energy! Consider increasing focus slots to 45m or 60m blocks to make deeper progress.")
+
+        if len(tips) == 0:
+            tips.append("Observe your schedule, turn off notifications, and keep your companion extension running.")
+
         return {
             "completion_probability": round(completion_prob, 2),
             "recommended_session_duration": recommended_dur,
             "burnout_risk": round(burnout_risk_score, 2),
             "best_study_slot": hour_labels[best_hour],
-            "confidence_score": round(confidence, 2)
+            "confidence_score": round(confidence, 2),
+            "tips": tips
         }
 
     except Exception as e:

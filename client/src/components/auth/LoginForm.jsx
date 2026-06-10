@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { loginUser } from "../../services/authService";
 
-const inputBase = "w-full bg-[#0a1628] border border-slate-800 rounded-xl text-slate-100 text-sm placeholder-slate-600 outline-none transition-all duration-200";
+const inputBase = "w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] outline-none transition-all duration-200";
 
 export default function LoginForm() {
     const navigate = useNavigate();
@@ -48,7 +48,7 @@ export default function LoginForm() {
 
             {/* Email */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">
                     Email Address
                 </label>
                 <div className="relative">
@@ -61,7 +61,7 @@ export default function LoginForm() {
                         onChange={handleChange} placeholder="you@example.com" required
                         className={`${inputBase} pl-10 pr-4 py-3`}
                         style={{ boxShadow: 'none' }}
-                        onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.6)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)'; }}
+                        onFocus={e => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
                         onBlur={e => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; }}
                     />
                 </div>
@@ -69,7 +69,7 @@ export default function LoginForm() {
 
             {/* Password */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">
                     Password
                 </label>
                 <div className="relative">
@@ -82,7 +82,7 @@ export default function LoginForm() {
                         name="password" value={formData.password}
                         onChange={handleChange} placeholder="Enter your password" required
                         className={`${inputBase} pl-10 pr-12 py-3`}
-                        onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.6)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)'; }}
+                        onFocus={e => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
                         onBlur={e => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; }}
                     />
                     <button
@@ -103,13 +103,11 @@ export default function LoginForm() {
             <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-200 disabled:opacity-55 disabled:cursor-not-allowed mt-1"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/10 disabled:opacity-55 disabled:cursor-not-allowed mt-1 cursor-pointer"
                 style={{
-                    background: loading ? '#5b21b6' : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                    boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+                    background: 'var(--accent-gradient)',
+                    boxShadow: '0 4px 20px var(--accent-glow)',
                 }}
-                onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = '0 8px 28px rgba(124,58,237,0.5)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(124,58,237,0.35)'; }}
             >
                 {loading ? (
                     <>
@@ -129,14 +127,14 @@ export default function LoginForm() {
 
             {/* Divider */}
             <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-800" />
-                <span className="text-slate-600 text-xs">or</span>
-                <div className="flex-1 h-px bg-slate-800" />
+                <div className="flex-1 h-px bg-[var(--border-color)]" />
+                <span className="text-[var(--text-muted)] text-xs">or</span>
+                <div className="flex-1 h-px bg-[var(--border-color)]" />
             </div>
 
-            <p className="text-center text-slate-500 text-sm">
+            <p className="text-center text-[var(--text-muted)] text-sm">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-violet-400 hover:text-violet-300 font-semibold transition-colors">
+                <Link to="/register" className="text-[var(--accent-color)] hover:underline font-semibold transition-colors">
                     Create one free →
                 </Link>
             </p>

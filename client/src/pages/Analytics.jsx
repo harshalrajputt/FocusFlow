@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getInsights, applyRecommendation } from "../services/analyticsService";
 
-const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
+const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
 const StatCard = ({ label, value, sub, icon, color, glow }) => (
     <div
@@ -13,9 +13,9 @@ const StatCard = ({ label, value, sub, icon, color, glow }) => (
         <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at top right, ${glow}, transparent 70%)` }} />
         <div className="relative z-10">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: color + '22' }}>{icon}</div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-1">{label}</p>
-            <p className="text-3xl font-bold text-slate-100">{value}</p>
-            {sub && <p className="text-slate-700 text-xs mt-1">{sub}</p>}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">{label}</p>
+            <p className="text-3xl font-bold text-[var(--text-primary)]">{value}</p>
+            {sub && <p className="text-[var(--text-secondary)] text-xs mt-1">{sub}</p>}
         </div>
     </div>
 );
@@ -62,11 +62,11 @@ export default function Analytics() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-                <svg className="animate-spin-slow w-8 h-8 text-violet-500 mb-4" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin-slow w-8 h-8 text-sky-500 mb-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                <p className="text-slate-500 text-sm">Compiling productivity metrics...</p>
+                <p className="text-[var(--text-muted)] text-sm">Compiling productivity metrics...</p>
             </div>
         );
     }
@@ -93,11 +93,11 @@ export default function Analytics() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100">Productivity Profile & Analytics</h1>
-                    <p className="text-slate-600 text-sm mt-1">AI-driven scheduling audit and behavioral analysis</p>
+                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">Productivity Profile & Analytics</h1>
+                    <p className="text-[var(--text-muted)] text-sm mt-1">AI-driven scheduling audit and behavioral analysis</p>
                 </div>
                 <div
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-500 text-sm self-start sm:self-auto"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[var(--text-muted)] text-sm self-start sm:self-auto"
                     style={cardStyle}
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -125,48 +125,48 @@ export default function Analytics() {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up delay-1">
-                <StatCard label="Focus Time" value={stats.focusHours} sub="This week" color="#7c3aed" glow="rgba(124,58,237,0.06)"
-                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                <StatCard label="Focus Time" value={stats.focusHours} sub="This week" color="#0284c7" glow="rgba(2,132,199,0.08)"
+                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
                 />
-                <StatCard label="Sessions" value={String(stats.completedSessions)} sub="Completed" color="#4f46e5" glow="rgba(79,70,229,0.06)"
-                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>}
+                <StatCard label="Sessions" value={String(stats.completedSessions)} sub="Completed" color="#0d9488" glow="rgba(13,148,136,0.08)"
+                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>}
                 />
-                <StatCard label="Tasks Done" value={String(stats.tasksCompleted)} sub="This week" color="#10b981" glow="rgba(16,185,129,0.06)"
-                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                <StatCard label="Tasks Done" value={String(stats.tasksCompleted)} sub="This week" color="#10b981" glow="rgba(16,185,129,0.08)"
+                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                 />
-                <StatCard label="Avg. Session" value={stats.avgSessionMinutes} sub="Minutes" color="#f59e0b" glow="rgba(245,158,11,0.06)"
-                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fcd34d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
+                <StatCard label="Avg. Session" value={stats.avgSessionMinutes} sub="Minutes" color="#f59e0b" glow="rgba(245,158,11,0.08)"
+                    icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
                 />
             </div>
 
             {/* Phase 7 Predictive AI Panel */}
             {insights?.mlPredictions && (
                 <div className="rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in-up delay-1" style={cardStyle}>
-                    <div className="col-span-2 md:col-span-4 border-b border-slate-800/40 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <div className="col-span-2 md:col-span-4 border-b border-[var(--border-color)] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h2 className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                             <span>🔮</span> Predictive AI Engine (Real-time ML Model)
                         </h2>
-                        <span className="self-start sm:self-auto text-[9px] text-violet-400 font-bold uppercase tracking-widest bg-violet-500/10 px-2.5 py-0.5 rounded border border-violet-500/20">
+                        <span className="self-start sm:self-auto text-[9px] text-sky-500 dark:text-sky-400 font-bold uppercase tracking-widest bg-sky-500/10 px-2.5 py-0.5 rounded border border-sky-500/20">
                             Active Model: Random Forest
                         </span>
                     </div>
 
                     {/* Completion Probability */}
-                    <div className="bg-[#0a1628]/60 p-4 rounded-xl border border-slate-800/40 text-center flex flex-col justify-center">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Completion Prob.</p>
-                        <p className="text-3xl font-extrabold text-violet-400">
+                    <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-color)] text-center flex flex-col justify-center">
+                        <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2">Completion Prob.</p>
+                        <p className="text-3xl font-extrabold text-sky-500 dark:text-sky-400">
                             {Math.round(insights.mlPredictions.completion_probability * 100)}%
                         </p>
-                        <p className="text-[10px] text-slate-600 mt-1.5">Expected focus success rate</p>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1.5">Expected focus success rate</p>
                     </div>
 
                     {/* Burnout Risk */}
-                    <div className="bg-[#0a1628]/60 p-4 rounded-xl border border-slate-800/40 flex flex-col justify-center">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Burnout Risk</p>
-                        <p className="text-3xl font-extrabold text-slate-200">
+                    <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-color)] flex flex-col justify-center">
+                        <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2">Burnout Risk</p>
+                        <p className="text-3xl font-extrabold text-[var(--text-primary)]">
                             {Math.round(insights.mlPredictions.burnout_risk * 100)}%
                         </p>
-                        <div className="w-full h-1.5 bg-slate-900 rounded-full mt-2 overflow-hidden">
+                        <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full mt-2 overflow-hidden">
                             <div 
                                 className="h-full rounded-full transition-all duration-300"
                                 style={{ 
@@ -178,21 +178,21 @@ export default function Analytics() {
                     </div>
 
                     {/* Best Time Slot */}
-                    <div className="bg-[#0a1628]/60 p-4 rounded-xl border border-slate-800/40 text-center flex flex-col justify-center">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">AI Best Study hour</p>
-                        <p className="text-2xl font-extrabold text-emerald-400">
+                    <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-color)] text-center flex flex-col justify-center">
+                        <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2">AI Best Study hour</p>
+                        <p className="text-2xl font-extrabold text-emerald-500 dark:text-emerald-400">
                             {insights.mlPredictions.best_study_slot}
                         </p>
-                        <p className="text-[10px] text-slate-600 mt-2">Predicted peak focus window</p>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-2">Predicted peak focus window</p>
                     </div>
 
                     {/* Confidence score */}
-                    <div className="bg-[#0a1628]/60 p-4 rounded-xl border border-slate-800/40 text-center flex flex-col justify-center">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Model Confidence</p>
-                        <p className="text-3xl font-extrabold text-amber-400">
+                    <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-color)] text-center flex flex-col justify-center">
+                        <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2">Model Confidence</p>
+                        <p className="text-3xl font-extrabold text-amber-500 dark:text-amber-400">
                             {Math.round(insights.mlPredictions.confidence_score * 100)}%
                         </p>
-                        <p className="text-[10px] text-slate-600 mt-1.5">
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1.5">
                             {insights.mlPredictions.confidence_score > 0.8 ? "Model trained on history" : "Cold-start synthetic model"}
                         </p>
                     </div>
@@ -203,12 +203,12 @@ export default function Analytics() {
             <div className="rounded-2xl p-6 animate-fade-in-up delay-2" style={cardStyle}>
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider">Weekly Focus Volume</h2>
-                        <p className="text-slate-500 text-[10px] mt-0.5">Distribution of focus hours across the last 7 calendar days</p>
+                        <h2 className="text-[var(--text-primary)] text-sm font-bold uppercase tracking-wider">Weekly Focus Volume</h2>
+                        <p className="text-[var(--text-muted)] text-[10px] mt-0.5">Distribution of focus hours across the last 7 calendar days</p>
                     </div>
                     <span
                         className="text-xs px-3 py-1 rounded-full font-semibold"
-                        style={{ background: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.2)' }}
+                        style={{ background: 'var(--accent-glow)', color: 'var(--accent-color)', border: '1px solid var(--border-color)' }}
                     >
                         Focus Distribution
                     </span>
@@ -221,7 +221,7 @@ export default function Analytics() {
                         
                         return (
                             <div key={c.day} className="flex flex-col items-center gap-2 flex-1 group relative">
-                                <div className="absolute opacity-0 group-hover:opacity-100 bottom-[105%] bg-slate-900 border border-slate-800 text-slate-100 text-[10px] px-2 py-1 rounded transition-opacity duration-200 pointer-events-none whitespace-nowrap z-25">
+                                <div className="absolute opacity-0 group-hover:opacity-100 bottom-[105%] bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] text-[10px] px-2 py-1 rounded transition-opacity duration-200 pointer-events-none whitespace-nowrap z-25">
                                     {c.hours} hrs focused
                                 </div>
                                 <div className="w-full flex items-end justify-center" style={{ height: maxBarHeight }}>
@@ -230,13 +230,13 @@ export default function Analytics() {
                                         style={{ 
                                             height: barHeight, 
                                             background: hasHours 
-                                                ? 'linear-gradient(180deg, #7c3aed 0%, #4f46e5 100%)' 
-                                                : 'rgba(148,163,184,0.06)',
-                                            boxShadow: hasHours ? '0 0 10px rgba(124,58,237,0.25)' : 'none'
+                                                ? 'var(--accent-gradient)' 
+                                                : 'var(--border-color)',
+                                            boxShadow: hasHours ? '0 0 10px var(--accent-glow)' : 'none'
                                         }}
                                     />
                                 </div>
-                                <span className="text-slate-500 text-xs font-medium">{c.day}</span>
+                                <span className="text-[var(--text-muted)] text-xs font-medium">{c.day}</span>
                             </div>
                         );
                     })}
@@ -248,8 +248,8 @@ export default function Analytics() {
                 
                 {/* Time of Day Comparison */}
                 <div className="rounded-2xl p-6 space-y-4" style={cardStyle}>
-                    <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
-                        <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                        <h2 className="text-[var(--text-primary)] text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                             <span>🌅</span> Productivity Hours Audit
                         </h2>
                         {analysis.claimedPeak === analysis.actualBestSlot ? (
@@ -264,35 +264,35 @@ export default function Analytics() {
                     </div>
 
                     <div className="space-y-4 py-2">
-                        <div className="flex justify-between items-center bg-[#0a1628]/60 p-3.5 rounded-xl border border-slate-800/40">
+                        <div className="flex justify-between items-center bg-[var(--bg-primary)] p-3.5 rounded-xl border border-[var(--border-color)]">
                             <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">What you claimed</p>
-                                <p className="text-sm font-bold text-slate-300 mt-1">{analysis.claimedPeak} Slot</p>
+                                <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">What you claimed</p>
+                                <p className="text-sm font-bold text-[var(--text-primary)] mt-1">{analysis.claimedPeak} Slot</p>
                             </div>
                             <span className="text-2xl">⏳</span>
                         </div>
 
-                        <div className="flex justify-between items-center bg-violet-600/10 p-3.5 rounded-xl border border-violet-500/20">
+                        <div className="flex justify-between items-center bg-sky-500/10 p-3.5 rounded-xl border border-sky-500/20">
                             <div>
-                                <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider">What data says</p>
-                                <p className="text-sm font-bold text-slate-200 mt-1">{analysis.actualBestSlot} Peak</p>
+                                <p className="text-[10px] text-sky-500 dark:text-sky-400 font-bold uppercase tracking-wider">What data says</p>
+                                <p className="text-sm font-bold text-[var(--text-primary)] mt-1">{analysis.actualBestSlot} Peak</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-violet-400 font-semibold">{analysis.actualBestSlotRate}%</p>
-                                <p className="text-[9px] text-slate-500 mt-0.5">Success Rate</p>
+                                <p className="text-xs text-sky-500 dark:text-sky-400 font-semibold">{analysis.actualBestSlotRate}%</p>
+                                <p className="text-[9px] text-[var(--text-muted)] mt-0.5">Success Rate</p>
                             </div>
                         </div>
                     </div>
                     
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                         Claimed peak hours are collected during onboarding. actual data is computed dynamically by matching completed sessions against start timestamps.
                     </p>
                 </div>
 
                 {/* Focus Duration Comparison */}
                 <div className="rounded-2xl p-6 space-y-4" style={cardStyle}>
-                    <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
-                        <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                        <h2 className="text-[var(--text-primary)] text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                             <span>⏱️</span> Optimal Session Audit
                         </h2>
                         {analysis.claimedDuration === analysis.optimalDuration ? (
@@ -307,27 +307,27 @@ export default function Analytics() {
                     </div>
 
                     <div className="space-y-4 py-2">
-                        <div className="flex justify-between items-center bg-[#0a1628]/60 p-3.5 rounded-xl border border-slate-800/40">
+                        <div className="flex justify-between items-center bg-[var(--bg-primary)] p-3.5 rounded-xl border border-[var(--border-color)]">
                             <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">What you claimed</p>
-                                <p className="text-sm font-bold text-slate-300 mt-1">{analysis.claimedDuration}</p>
+                                <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">What you claimed</p>
+                                <p className="text-sm font-bold text-[var(--text-primary)] mt-1">{analysis.claimedDuration}</p>
                             </div>
                             <span className="text-2xl">⏳</span>
                         </div>
 
-                        <div className="flex justify-between items-center bg-violet-600/10 p-3.5 rounded-xl border border-violet-500/20">
+                        <div className="flex justify-between items-center bg-teal-500/10 p-3.5 rounded-xl border border-teal-500/20">
                             <div>
-                                <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider">What data says</p>
-                                <p className="text-sm font-bold text-slate-200 mt-1">{analysis.optimalDuration} target</p>
+                                <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider">What data says</p>
+                                <p className="text-sm font-bold text-[var(--text-primary)] mt-1">{analysis.optimalDuration} target</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-violet-400 font-semibold">{analysis.optimalDurationRate}%</p>
-                                <p className="text-[9px] text-slate-500 mt-0.5">Success Rate</p>
+                                <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold">{analysis.optimalDurationRate}%</p>
+                                <p className="text-[9px] text-[var(--text-muted)] mt-0.5">Success Rate</p>
                             </div>
                         </div>
                     </div>
 
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                         Longer sessions often suffer from fatigue-induced interruptions. FocusFlow audits actual focus minutes to highlight your optimal baseline study cycle.
                     </p>
                 </div>
@@ -339,19 +339,19 @@ export default function Analytics() {
                 
                 {/* Heatmap */}
                 <div className="rounded-2xl p-5 md:col-span-1 space-y-4" style={cardStyle}>
-                    <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider">Activity Density</h2>
-                    <p className="text-slate-500 text-[10px] mt-0.5">Tracking sessions count over the past 49 calendar days</p>
+                    <h2 className="text-[var(--text-primary)] text-sm font-bold uppercase tracking-wider">Activity Density</h2>
+                    <p className="text-[var(--text-muted)] text-[10px] mt-0.5">Tracking sessions count over the past 49 calendar days</p>
                     
                     <div className="grid grid-cols-7 gap-1">
                         {heatmap.map((cell, i) => {
                             let bg = "rgba(148, 163, 184, 0.05)";
                             let border = "transparent";
                             
-                            if (cell.count === 1) bg = "rgba(124, 58, 237, 0.2)";
-                            else if (cell.count === 2) bg = "rgba(124, 58, 237, 0.45)";
+                            if (cell.count === 1) bg = "rgba(13, 148, 136, 0.15)";
+                            else if (cell.count === 2) bg = "rgba(13, 148, 136, 0.4)";
                             else if (cell.count >= 3) {
-                                bg = "rgba(124, 58, 237, 0.8)";
-                                border = "rgba(167, 139, 250, 0.35)";
+                                bg = "rgba(13, 148, 136, 0.75)";
+                                border = "rgba(45, 212, 191, 0.3)";
                             }
                             
                             return (
@@ -360,7 +360,7 @@ export default function Analytics() {
                                     className="aspect-square rounded-sm transition-all duration-200 relative group"
                                     style={{ background: bg, border: `1px solid ${border}` }}
                                 >
-                                    <div className="absolute opacity-0 group-hover:opacity-100 bottom-[125%] left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 text-[9px] text-slate-200 px-1.5 py-0.5 rounded transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20">
+                                    <div className="absolute opacity-0 group-hover:opacity-100 bottom-[125%] left-1/2 -translate-x-1/2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[9px] text-[var(--text-primary)] px-1.5 py-0.5 rounded transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20">
                                         {cell.date}: {cell.count} session{cell.count !== 1 ? 's' : ''}
                                     </div>
                                 </div>
@@ -368,13 +368,13 @@ export default function Analytics() {
                         })}
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-800/40">
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-color)]">
                         <span>Less active</span>
                         <div className="flex gap-1">
-                            <div className="w-2.5 h-2.5 rounded bg-slate-800" />
-                            <div className="w-2.5 h-2.5 rounded bg-violet-600/20" />
-                            <div className="w-2.5 h-2.5 rounded bg-violet-600/50" />
-                            <div className="w-2.5 h-2.5 rounded bg-violet-600" />
+                            <div className="w-2.5 h-2.5 rounded bg-[var(--bg-primary)] border border-[var(--border-color)]" />
+                            <div className="w-2.5 h-2.5 rounded bg-teal-500/20" />
+                            <div className="w-2.5 h-2.5 rounded bg-teal-500/50" />
+                            <div className="w-2.5 h-2.5 rounded bg-teal-500" />
                         </div>
                         <span>More active</span>
                     </div>
@@ -382,10 +382,10 @@ export default function Analytics() {
 
                 {/* AI Coach Cards */}
                 <div className="rounded-2xl p-5 md:col-span-2 space-y-4" style={cardStyle}>
-                    <h2 className="text-slate-300 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <h2 className="text-[var(--text-primary)] text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                         <span>🤖</span> AI Productivity Coach (Rule Engine)
                     </h2>
-                    <p className="text-slate-500 text-[10px] mt-0.5">
+                    <p className="text-[var(--text-muted)] text-[10px] mt-0.5">
                         Active suggestions based on audited behavioral data and onboarding profile distractions
                     </p>
 
@@ -393,16 +393,16 @@ export default function Analytics() {
                         {recommendations.map((rec) => (
                             <div
                                 key={rec.id}
-                                className="p-4 rounded-xl border border-slate-800 bg-[#0a1628]/40 hover:bg-[#0a1628]/70 transition-all duration-250 flex flex-col sm:flex-row justify-between sm:items-center gap-4"
+                                className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] transition-all duration-250 flex flex-col sm:flex-row justify-between sm:items-center gap-4"
                             >
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-bold text-slate-200">{rec.title}</h3>
-                                        <span className="px-1.5 py-0.5 rounded bg-violet-600/10 text-violet-400 border border-violet-500/20 text-[9px] font-semibold tracking-wider">
+                                        <h3 className="text-sm font-bold text-[var(--text-primary)]">{rec.title}</h3>
+                                        <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20 text-[9px] font-semibold tracking-wider">
                                             {rec.id.includes("ml") ? "AI Model Suggestion" : "Rule Triggered"}
                                         </span>
                                     </div>
-                                    <p className="text-slate-400 text-xs leading-relaxed max-w-xl">{rec.desc}</p>
+                                    <p className="text-[var(--text-secondary)] text-xs leading-relaxed max-w-xl">{rec.desc}</p>
                                 </div>
 
                                 {rec.applied ? (
@@ -412,8 +412,8 @@ export default function Analytics() {
                                 ) : (
                                     <button
                                         onClick={() => handleApplyRecommendation(rec.id, rec.type, rec.suggestedValue)}
-                                        className="self-start sm:self-center px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all duration-200 whitespace-nowrap cursor-pointer hover:shadow-lg hover:shadow-violet-500/15"
-                                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                                        className="self-start sm:self-center px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all duration-200 whitespace-nowrap cursor-pointer hover:shadow-lg hover:shadow-sky-500/15"
+                                        style={{ background: 'var(--accent-gradient)' }}
                                     >
                                         Apply Suggestion
                                     </button>

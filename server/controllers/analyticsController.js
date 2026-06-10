@@ -1,6 +1,33 @@
 const mongoose = require("mongoose");
 const FocusSession = require("../models/FocusSession");
 const UserProfile = require("../models/UserProfile");
+const WeeklyWebsiteUsage = require("../models/WeeklyWebsiteUsage");
+const MonthlyWebsiteUsage = require("../models/MonthlyWebsiteUsage");
+
+// Get Monday of the date's week (YYYY-MM-DD)
+function getWeekStartDate(dateStr) {
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(date.setDate(diff));
+        return monday.toISOString().split("T")[0];
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+// Get 1st of the date's month (YYYY-MM-01)
+function getMonthStartDate(dateStr) {
+    try {
+        const [year, month] = dateStr.split("-");
+        if (!year || !month) return dateStr;
+        return `${year}-${month}-01`;
+    } catch (e) {
+        return dateStr;
+    }
+}
 
 // Helper to check what time of day a Date belongs to
 const getTimeOfDay = (date) => {
@@ -27,6 +54,28 @@ const getInsights = async (req, res) => {
         // 2. Fetch all user focus sessions
         const sessions = await FocusSession.find({ userId, sessionType: "Focus" }).sort({ startTime: 1 });
 
+        // Aggregate weekly/monthly tracking spends for ML input
+        const dateStr = new Date().toLocaleDateString('en-CA');
+        const currentWeekStart = getWeekStartDate(dateStr);
+        const currentMonthStart = getMonthStartDate(dateStr);
+
+        const weeklyLogs = await WeeklyWebsiteUsage.find({ userId, weekStartDate: currentWeekStart });
+        const monthlyLogs = await MonthlyWebsiteUsage.find({ userId, monthStartDate: currentMonthStart });
+
+        let prodWeekly = 0, distWeekly = 0, neutWeekly = 0;
+        weeklyLogs.forEach(w => {
+            if (w.category === "Productive") prodWeekly += w.timeSpent;
+            else if (w.category === "Distracting") distWeekly += w.timeSpent;
+            else neutWeekly += w.timeSpent;
+        });
+
+        let prodMonthly = 0, distMonthly = 0, neutMonthly = 0;
+        monthlyLogs.forEach(m => {
+            if (m.category === "Productive") prodMonthly += m.timeSpent;
+            else if (m.category === "Distracting") distMonthly += m.timeSpent;
+            else neutMonthly += m.timeSpent;
+        });
+
         // Connect to Python FastAPI ML Service
         let mlPredictions = null;
         try {
@@ -42,7 +91,13 @@ const getInsights = async (req, res) => {
                     completed: s.completed,
                     interruptions: s.interruptions || 0,
                     pauseCount: s.pauseCount || 0
-                }))
+                })),
+                productive_time_weekly: prodWeekly,
+                distracting_time_weekly: distWeekly,
+                neutral_time_weekly: neutWeekly,
+                productive_time_monthly: prodMonthly,
+                distracting_time_monthly: distMonthly,
+                neutral_time_monthly: neutMonthly
             };
 
             const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
@@ -287,6 +342,20 @@ const getInsights = async (req, res) => {
                     applied: false,
                     type: "schedule_shift",
                     suggestedValue: mlPredictions.best_study_slot
+                });
+            }
+
+            // Inject ML dynamic advice tips as recommendations
+            if (mlPredictions.tips && Array.isArray(mlPredictions.tips)) {
+                mlPredictions.tips.forEach((tip, idx) => {
+                    recommendations.push({
+                        id: `rec_ml_tip_${idx}`,
+                        title: "AI Focus Flow Recommendation",
+                        desc: tip,
+                        action: "Stick to plan",
+                        applied: false,
+                        type: "ai_tip"
+                    });
                 });
             }
         }

@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { registerUser } from "../../services/authService";
 
-const inputBase = "w-full bg-[#0a1628] border border-slate-800 rounded-xl text-slate-100 text-sm placeholder-slate-600 outline-none transition-all duration-200 pl-10 pr-4 py-3";
+const inputBase = "w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] outline-none transition-all duration-200 pl-10 pr-4 py-3";
 
 export default function RegisterForm() {
     const navigate = useNavigate();
@@ -28,12 +28,12 @@ export default function RegisterForm() {
         if (/[^A-Za-z0-9]/.test(p)) s++;
         const labels = ["", "Weak", "Fair", "Good", "Strong"];
         const barColors = [
-            ["#ef4444", "#1e293b", "#1e293b", "#1e293b"],
-            ["#f59e0b", "#f59e0b", "#1e293b", "#1e293b"],
-            ["#3b82f6", "#3b82f6", "#3b82f6", "#1e293b"],
+            ["#ef4444", "var(--border-color)", "var(--border-color)", "var(--border-color)"],
+            ["#f59e0b", "#f59e0b", "var(--border-color)", "var(--border-color)"],
+            ["#3b82f6", "#3b82f6", "#3b82f6", "var(--border-color)"],
             ["#10b981", "#10b981", "#10b981", "#10b981"],
         ];
-        return { score: s, label: labels[s], colors: barColors[s - 1] || ["#1e293b", "#1e293b", "#1e293b", "#1e293b"] };
+        return { score: s, label: labels[s], colors: barColors[s - 1] || ["var(--border-color)", "var(--border-color)", "var(--border-color)", "var(--border-color)"] };
     };
     const strength = getStrength(formData.password);
 
@@ -41,8 +41,8 @@ export default function RegisterForm() {
     const pwdMismatch = formData.confirmPassword && formData.password !== formData.confirmPassword;
 
     const focusStyle = (e) => {
-        e.target.style.borderColor = 'rgba(124,58,237,0.6)';
-        e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)';
+        e.target.style.borderColor = 'var(--accent-color)';
+        e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
     };
     const blurStyle = (e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; };
 
@@ -84,7 +84,7 @@ export default function RegisterForm() {
 
             {/* Name */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Full Name</label>
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Full Name</label>
                 <div className="relative">
                     <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" required className={inputBase} onFocus={focusStyle} onBlur={blurStyle} />
@@ -93,7 +93,7 @@ export default function RegisterForm() {
 
             {/* Email */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Email Address</label>
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Email Address</label>
                 <div className="relative">
                     <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                     <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" required className={inputBase} onFocus={focusStyle} onBlur={blurStyle} />
@@ -102,7 +102,7 @@ export default function RegisterForm() {
 
             {/* Password */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Password</label>
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Password</label>
                 <div className="relative">
                     <LockIcon />
                     <input
@@ -123,20 +123,20 @@ export default function RegisterForm() {
                                 <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300" style={{ background: color }} />
                             ))}
                         </div>
-                        <p className="text-xs text-slate-500">{strength.label} password</p>
+                        <p className="text-xs text-[var(--text-muted)]">{strength.label} password</p>
                     </div>
                 )}
             </div>
 
             {/* Confirm Password */}
             <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Confirm Password</label>
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Confirm Password</label>
                 <div className="relative">
                     <LockIcon />
                     <input
                         type={showConfirm ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword}
                         onChange={handleChange} placeholder="Repeat your password" required
-                        className={`w-full bg-[#0a1628] border rounded-xl text-slate-100 text-sm placeholder-slate-600 outline-none transition-all duration-200 pl-10 pr-11 py-3 ${pwdMismatch ? 'border-red-500/50' : pwdMatch ? 'border-emerald-500/50' : 'border-slate-800'}`}
+                        className={`w-full bg-[var(--bg-primary)] border rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] outline-none transition-all duration-200 pl-10 pr-11 py-3 ${pwdMismatch ? 'border-red-500/50' : pwdMatch ? 'border-emerald-500/50' : 'border-[var(--border-color)]'}`}
                         onFocus={focusStyle} onBlur={blurStyle}
                     />
                     <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors">
@@ -151,13 +151,11 @@ export default function RegisterForm() {
             {/* Submit */}
             <button
                 type="submit" disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-200 disabled:opacity-55 disabled:cursor-not-allowed mt-2"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/10 disabled:opacity-55 disabled:cursor-not-allowed mt-2 cursor-pointer"
                 style={{
-                    background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                    boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+                    background: 'var(--accent-gradient)',
+                    boxShadow: '0 4px 20px var(--accent-glow)',
                 }}
-                onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = '0 8px 28px rgba(124,58,237,0.5)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(124,58,237,0.35)'; }}
             >
                 {loading ? (
                     <><svg className="animate-spin-slow w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Creating account...</>
@@ -167,14 +165,14 @@ export default function RegisterForm() {
             </button>
 
             <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-800" />
-                <span className="text-slate-600 text-xs">or</span>
-                <div className="flex-1 h-px bg-slate-800" />
+                <div className="flex-1 h-px bg-[var(--border-color)]" />
+                <span className="text-[var(--text-muted)] text-xs">or</span>
+                <div className="flex-1 h-px bg-[var(--border-color)]" />
             </div>
 
-            <p className="text-center text-slate-500 text-sm">
+            <p className="text-center text-[var(--text-muted)] text-sm">
                 Already have an account?{" "}
-                <Link to="/login" className="text-violet-400 hover:text-violet-300 font-semibold transition-colors">
+                <Link to="/login" className="text-[var(--accent-color)] hover:underline font-semibold transition-colors">
                     Sign in →
                 </Link>
             </p>

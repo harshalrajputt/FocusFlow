@@ -1,64 +1,64 @@
 import { useState, useEffect } from "react";
 import { getSchedule, regenerateSchedule } from "../services/scheduleService";
 
-const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
+const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const EVENT_TYPE_STYLES = {
     sleep: {
-        bg: "rgba(15, 23, 42, 0.4)",
-        border: "rgba(148, 163, 184, 0.1)",
-        color: "#64748b",
+        bg: "rgba(100, 116, 139, 0.08)",
+        border: "rgba(100, 116, 139, 0.15)",
+        color: "var(--text-muted)",
         icon: "🌙",
         label: "Sleep"
     },
     class: {
-        bg: "rgba(59, 130, 246, 0.1)",
-        border: "rgba(59, 130, 246, 0.2)",
-        color: "#60a5fa",
+        bg: "rgba(37, 99, 235, 0.08)",
+        border: "rgba(37, 99, 235, 0.18)",
+        color: "#2563eb",
         icon: "🏫",
         label: "Lectures / School"
     },
     coaching: {
-        bg: "rgba(139, 92, 246, 0.12)",
-        border: "rgba(139, 92, 246, 0.25)",
-        color: "#a78bfa",
+        bg: "var(--accent-glow)",
+        border: "var(--border-color)",
+        color: "var(--accent-color)",
         icon: "✏️",
         label: "Coaching / Extra Class"
     },
     commute: {
-        bg: "rgba(100, 116, 139, 0.1)",
-        border: "rgba(100, 116, 139, 0.15)",
-        color: "#94a3b8",
+        bg: "rgba(100, 116, 139, 0.05)",
+        border: "rgba(100, 116, 139, 0.12)",
+        color: "var(--text-muted)",
         icon: "🚌",
         label: "Travel Buffer"
     },
     study: {
-        bg: "rgba(124, 58, 237, 0.15)",
-        border: "rgba(124, 58, 237, 0.3)",
-        color: "#c4b5fd",
+        bg: "rgba(13, 148, 136, 0.08)",
+        border: "rgba(13, 148, 136, 0.18)",
+        color: "#0d9488",
         icon: "📚",
         label: "Study Slot"
     },
     break: {
-        bg: "rgba(16, 185, 129, 0.1)",
-        border: "rgba(16, 185, 129, 0.2)",
-        color: "#34d399",
+        bg: "rgba(5, 150, 105, 0.08)",
+        border: "rgba(5, 150, 105, 0.18)",
+        color: "#059669",
         icon: "☕",
         label: "Rest Break"
     },
     leisure: {
-        bg: "rgba(245, 158, 11, 0.08)",
-        border: "rgba(245, 158, 11, 0.15)",
-        color: "#fcd34d",
+        bg: "rgba(217, 119, 6, 0.08)",
+        border: "rgba(217, 119, 6, 0.18)",
+        color: "#d97706",
         icon: "🏖️",
         label: "Leisure / Personal"
     },
     other: {
-        bg: "rgba(148, 163, 184, 0.08)",
-        border: "rgba(148, 163, 184, 0.15)",
-        color: "#cbd5e1",
+        bg: "var(--bg-primary)",
+        border: "var(--border-color)",
+        color: "var(--text-secondary)",
         icon: "🗓️",
         label: "Other"
     }
@@ -115,11 +115,11 @@ export default function Schedule() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-                <svg className="animate-spin-slow w-8 h-8 text-violet-500 mb-4" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin-slow w-8 h-8 text-sky-500 mb-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                <p className="text-slate-500 text-sm">Loading baseline schedule...</p>
+                <p className="text-[var(--text-muted)] text-sm">Loading baseline schedule...</p>
             </div>
         );
     }
@@ -132,10 +132,10 @@ export default function Schedule() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-100">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
                         Baseline Study Schedule 📅
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1.5">
+                    <p className="text-[var(--text-muted)] text-sm mt-1.5">
                         Your Week-1 baseline template generated from onboarding. We use this to compare expectations against actual tracking.
                     </p>
                 </div>
@@ -143,7 +143,7 @@ export default function Schedule() {
                 <button
                     onClick={handleRegenerate}
                     disabled={regenerating}
-                    className="self-start md:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-[#0d1526] hover:bg-[#121b30] text-slate-300 text-xs font-semibold tracking-wider uppercase transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="self-start md:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-semibold tracking-wider uppercase transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                     {regenerating ? (
                         <><svg className="animate-spin-slow w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Regenerating...</>
@@ -176,7 +176,7 @@ export default function Schedule() {
             )}
 
             {/* Day Selector Tabs */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-800/60 pb-3 animate-fade-in-up delay-1">
+            <div className="flex flex-wrap gap-2 border-b border-[var(--border-color)] pb-3 animate-fade-in-up delay-1">
                 {DAYS_OF_WEEK.map(day => {
                     const isActive = day === selectedDay;
                     const isWeekend = day === "Saturday" || day === "Sunday";
@@ -187,8 +187,8 @@ export default function Schedule() {
                             onClick={() => setSelectedDay(day)}
                             className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer ${
                                 isActive 
-                                ? 'bg-violet-600 text-white shadow-md shadow-violet-500/25' 
-                                : 'bg-[#0d1526]/50 border border-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-800'
+                                ? 'bg-[var(--accent-color)] text-white shadow-md shadow-[var(--accent-glow)]' 
+                                : 'bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                             }`}
                         >
                             {day} {isWeekend ? "🌴" : ""}
@@ -197,15 +197,14 @@ export default function Schedule() {
                 })}
             </div>
 
-            {/* Schedule Timeline Grid */}
-            <div className="grid md:grid-cols-3 gap-6">
+                     <div className="grid md:grid-cols-3 gap-6">
                 
                 {/* Timeline display: Left 2 columns */}
                 <div className="md:col-span-2 space-y-3 animate-fade-in-up delay-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Day Timeline ({selectedDay})</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Day Timeline ({selectedDay})</p>
                     
                     {currentDaySchedule.events.length === 0 ? (
-                        <div className="rounded-2xl p-8 text-center text-slate-500" style={cardStyle}>
+                        <div className="rounded-2xl p-8 text-center text-[var(--text-muted)]" style={cardStyle}>
                             No events generated for this day. Click 'Reset to Baseline' to trigger schedule generation.
                         </div>
                     ) : (
@@ -222,14 +221,14 @@ export default function Schedule() {
                                     }}
                                 >
                                     {/* Icon / Time */}
-                                    <div className="text-xl shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-slate-900/40">
+                                    <div className="text-xl shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--bg-primary)]">
                                         {style.icon}
                                     </div>
-
+ 
                                     {/* Event Meta */}
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-sm font-semibold text-slate-200 truncate">{event.title}</h3>
+                                            <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">{event.title}</h3>
                                             <span 
                                                 className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest"
                                                 style={{ background: 'rgba(148, 163, 184, 0.08)', color: style.color }}
@@ -238,16 +237,16 @@ export default function Schedule() {
                                             </span>
                                         </div>
                                         {event.associatedGoal && (
-                                            <p className="text-xs text-violet-400 font-medium mt-1">
+                                            <p className="text-xs text-[var(--accent-color)] font-medium mt-1">
                                                 🎯 Target Goal: {event.associatedGoal}
                                             </p>
                                         )}
                                     </div>
-
+ 
                                     {/* Start & End time */}
                                     <div className="text-right shrink-0">
-                                        <p className="text-xs font-bold text-slate-300">{event.startTime}</p>
-                                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{event.endTime}</p>
+                                        <p className="text-xs font-bold text-[var(--text-secondary)]">{event.startTime}</p>
+                                        <p className="text-[10px] text-[var(--text-muted)] font-semibold mt-0.5">{event.endTime}</p>
                                     </div>
                                 </div>
                             );
@@ -260,12 +259,12 @@ export default function Schedule() {
                     
                     {/* Insights Block */}
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Schedule Insights</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Schedule Insights</p>
                         <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
-                            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                 <span>🧠</span> Baseline Rationale
                             </h3>
-                            <div className="space-y-3 text-xs text-slate-400 leading-relaxed">
+                            <div className="space-y-3 text-xs text-[var(--text-secondary)] leading-relaxed">
                                 <p>
                                     This schedule is a **baseline observation layout** for Week 1. It assumes perfect compliance with your onboarding inputs to gather behavioral data.
                                 </p>
@@ -278,24 +277,21 @@ export default function Schedule() {
                             </div>
                         </div>
                     </div>
-
+ 
                     {/* Color Indicators Legend */}
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Legend</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Legend</p>
                         <div className="rounded-2xl p-5 space-y-3.5" style={cardStyle}>
                             {Object.entries(EVENT_TYPE_STYLES).map(([type, style]) => (
-                                <div key={type} className="flex items-center gap-2.5 text-xs text-slate-400">
+                                <div key={type} className="flex items-center gap-2.5 text-xs text-[var(--text-secondary)]">
                                     <span className="text-lg leading-none">{style.icon}</span>
                                     <span className="font-semibold" style={{ color: style.color }}>{style.label}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-
                 </div>
-
             </div>
-
         </div>
     );
 }

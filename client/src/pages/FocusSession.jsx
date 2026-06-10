@@ -6,21 +6,21 @@ const MODES = [
     {
         label: "Focus", duration: 25,
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-        ringColor: '#7c3aed', ringGlow: 'rgba(124,58,237,0.35)',
+        ringColor: '#0284c7', ringGlow: 'rgba(2,132,199,0.25)',
     },
     {
         label: "Short Break", duration: 5,
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
-        ringColor: '#10b981', ringGlow: 'rgba(16,185,129,0.3)',
+        ringColor: '#0d9488', ringGlow: 'rgba(13,148,136,0.2)',
     },
     {
         label: "Long Break", duration: 15,
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-        ringColor: '#4f46e5', ringGlow: 'rgba(79,70,229,0.3)',
+        ringColor: '#0369a1', ringGlow: 'rgba(3,105,161,0.2)',
     },
 ];
 
-const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
+const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
 // Post-Session Feedback Modal (Phase 3 Adherence & Ratings)
 const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
@@ -33,16 +33,22 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-md p-6 rounded-2xl border border-slate-800 bg-[#0d1526] shadow-2xl space-y-5">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+            style={{ background: 'rgba(15, 23, 42, 0.6)' }}
+        >
+            <div
+                className="w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5"
+                style={cardStyle}
+            >
                 <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 mb-3 text-xl">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-sky-500/10 text-sky-400 mb-3 text-xl">
                         {isCompleted ? "🏆" : "⚠️"}
                     </div>
-                    <h2 className="text-lg font-bold text-slate-100">
+                    <h2 className="text-lg font-bold text-[var(--text-primary)]">
                         {isCompleted ? "Session Complete!" : "Session Stopped"}
                     </h2>
-                    <p className="text-slate-500 text-xs mt-1">Reflect on your focus to improve your scheduling profile.</p>
+                    <p className="text-[var(--text-muted)] text-xs mt-1">Reflect on your focus to improve your scheduling profile.</p>
                 </div>
 
                 <div className="space-y-4">
@@ -67,7 +73,7 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
 
                     {/* Difficulty */}
                     <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">
                             How difficult was it to focus?
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -78,8 +84,8 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
                                     onClick={() => setDifficulty(diff)}
                                     className={`py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border cursor-pointer ${
                                         difficulty === diff
-                                        ? 'bg-violet-600/15 border-violet-500 text-violet-300'
-                                        : 'bg-[#0a1628] border-slate-800 text-slate-400'
+                                        ? 'bg-[var(--accent-glow)] border-[var(--accent-color)] text-[var(--accent-color)]'
+                                        : 'bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                                     }`}
                                 >
                                     {diff}
@@ -89,47 +95,47 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
                     </div>
 
                     {/* Adherence Checkboxes */}
-                    <div className="space-y-2 border-t border-slate-800/40 pt-4">
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+                    <div className="space-y-2 border-t border-[var(--border-color)] pt-4">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">
                             Schedule Adherence
                         </label>
                         
-                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] cursor-pointer hover:border-[var(--border-hover)]">
                             <input
                                 type="checkbox"
                                 checked={followedSchedule}
                                 onChange={(e) => setFollowedSchedule(e.target.checked)}
-                                className="accent-violet-500 h-4 w-4 rounded"
+                                className="accent-sky-500 h-4 w-4 rounded"
                             />
-                            <div className="text-xs text-slate-300">
-                                <p className="font-semibold">Followed scheduled slot</p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">I am studying when scheduled.</p>
+                            <div className="text-xs text-[var(--text-secondary)]">
+                                <p className="font-semibold text-[var(--text-primary)]">Followed scheduled slot</p>
+                                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">I am studying when scheduled.</p>
                             </div>
                         </label>
 
-                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] cursor-pointer hover:border-[var(--border-hover)]">
                             <input
                                 type="checkbox"
                                 checked={missedTask}
                                 onChange={(e) => setMissedTask(e.target.checked)}
-                                className="accent-violet-500 h-4 w-4 rounded"
+                                className="accent-sky-500 h-4 w-4 rounded"
                             />
-                            <div className="text-xs text-slate-300">
-                                <p className="font-semibold">Missed a task earlier today</p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">I skipped some scheduled study periods.</p>
+                            <div className="text-xs text-[var(--text-secondary)]">
+                                <p className="font-semibold text-[var(--text-primary)]">Missed a task earlier today</p>
+                                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">I skipped some scheduled study periods.</p>
                             </div>
                         </label>
 
-                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0a1628]/40 border border-slate-800/40 cursor-pointer hover:border-slate-800">
+                        <label className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] cursor-pointer hover:border-[var(--border-hover)]">
                             <input
                                 type="checkbox"
                                 checked={delayedTask}
                                 onChange={(e) => setDelayedTask(e.target.checked)}
-                                className="accent-violet-500 h-4 w-4 rounded"
+                                className="accent-sky-500 h-4 w-4 rounded"
                             />
-                            <div className="text-xs text-slate-300">
-                                <p className="font-semibold">Task was delayed</p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">I started studying later than planned.</p>
+                            <div className="text-xs text-[var(--text-secondary)]">
+                                <p className="font-semibold text-[var(--text-primary)]">Task was delayed</p>
+                                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">I started studying later than planned.</p>
                             </div>
                         </label>
                     </div>
@@ -139,7 +145,7 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 text-slate-400 text-xs font-semibold cursor-pointer"
+                        className="flex-1 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs font-semibold cursor-pointer transition-colors"
                     >
                         Skip Feedback
                     </button>
@@ -147,7 +153,7 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
                         type="button"
                         onClick={() => onSubmit({ rating, difficulty, followedSchedule, missedTask, delayedTask })}
                         className="flex-1 py-2.5 rounded-xl text-white text-xs font-semibold cursor-pointer"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                        style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 12px var(--accent-glow)' }}
                     >
                         Submit & Save
                     </button>
@@ -391,8 +397,8 @@ const FocusSession = () => {
             
             {/* Header */}
             <div className="animate-fade-in-up">
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100">Focus Timer ⏱️</h1>
-                <p className="text-slate-600 text-sm mt-1">Deep study using the Pomodoro technique with behavioral tracking</p>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">Focus Timer ⏱️</h1>
+                <p className="text-[var(--text-muted)] text-sm mt-1">Deep study using the Pomodoro technique with behavioral tracking</p>
             </div>
 
             {/* Mode selector */}
@@ -404,7 +410,7 @@ const FocusSession = () => {
                         className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
                         style={modeIdx === i
                             ? { background: `${m.ringColor}22`, color: m.ringColor, border: `1px solid ${m.ringColor}40` }
-                            : { background: 'transparent', color: '#475569', border: '1px solid transparent' }
+                            : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent' }
                         }
                     >
                         <span style={modeIdx === i ? { color: m.ringColor } : {}}>{m.icon}</span>
@@ -448,8 +454,8 @@ const FocusSession = () => {
 
                     {/* Timer text */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="font-mono font-bold text-slate-100 text-5xl tracking-tight">{mins}:{secs}</span>
-                        <span className="text-slate-600 text-sm mt-1 font-medium">{mode.label}</span>
+                        <span className="font-mono font-bold text-[var(--text-primary)] text-5xl tracking-tight">{mins}:{secs}</span>
+                        <span className="text-[var(--text-muted)] text-sm mt-1 font-medium">{mode.label}</span>
                         {running && (
                             <span className="text-xs mt-2 font-semibold animate-pulse" style={{ color: mode.ringColor }}>● Live</span>
                         )}
@@ -461,10 +467,7 @@ const FocusSession = () => {
                     {/* Reset */}
                     <button
                         onClick={handleReset}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200 cursor-pointer"
-                        style={{ background: '#0d1526', border: '1px solid rgba(148,163,184,0.1)' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'; }}
+                        className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
                     </button>
@@ -474,7 +477,7 @@ const FocusSession = () => {
                         onClick={handlePlayPause}
                         className="w-[70px] h-[70px] flex items-center justify-center rounded-full text-white transition-all duration-200 cursor-pointer"
                         style={{
-                            background: `linear-gradient(135deg, ${mode.ringColor}, ${mode.ringColor === '#7c3aed' ? '#4f46e5' : mode.ringColor === '#10b981' ? '#0d9488' : '#2563eb'})`,
+                            background: `linear-gradient(135deg, ${mode.ringColor}, ${mode.ringColor === '#0284c7' ? '#0d9488' : mode.ringColor === '#0d9488' ? '#0f766e' : '#02507d'})`,
                             boxShadow: `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`,
                         }}
                         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.07)'; e.currentTarget.style.boxShadow = `0 0 0 12px ${mode.ringColor}22, 0 12px 32px ${mode.ringGlow}`; }}
@@ -490,10 +493,7 @@ const FocusSession = () => {
                     {/* Skip */}
                     <button
                         onClick={handleSkip}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-slate-500 transition-all duration-200 cursor-pointer"
-                        style={{ background: '#0d1526', border: '1px solid rgba(148,163,184,0.1)' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'; }}
+                        className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
                     </button>
@@ -515,19 +515,17 @@ const FocusSession = () => {
 
             {/* Task Selector */}
             <div className="flex flex-col gap-2 animate-fade-in-up delay-2 max-w-sm mx-auto w-full">
-                <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 text-center">
+                <label className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] text-center">
                     Focus Target Task
                 </label>
                 <select
                     value={selectedTaskId}
                     onChange={(e) => setSelectedTaskId(e.target.value)}
-                    className="w-full bg-[#0a1628] border border-slate-800 rounded-xl text-slate-200 text-sm outline-none px-4 py-3 cursor-pointer transition-all duration-200"
-                    onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.6)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; }}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] focus:border-[var(--accent-color)] focus:shadow-[0_0_0_3px_var(--accent-glow)] rounded-xl text-[var(--text-primary)] text-sm outline-none px-4 py-3 cursor-pointer transition-all duration-200"
                 >
-                    <option value="">General Focus / No Task Selected</option>
+                    <option value="" className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">General Focus / No Task Selected</option>
                     {tasks.map(t => (
-                        <option key={t._id} value={t._id}>
+                        <option key={t._id} value={t._id} className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">
                             {t.title} ({t.priority})
                         </option>
                     ))}
@@ -542,8 +540,8 @@ const FocusSession = () => {
                     { label: "Best Streak", value: String(summary.bestStreak) },
                 ].map(s => (
                     <div key={s.label} className="rounded-xl text-center py-4 px-3" style={cardStyle}>
-                        <p className="text-2xl font-bold text-slate-100">{s.value}</p>
-                        <p className="text-slate-700 text-xs mt-1">{s.label}</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</p>
+                        <p className="text-[var(--text-secondary)] text-xs mt-1">{s.label}</p>
                     </div>
                 ))}
             </div>

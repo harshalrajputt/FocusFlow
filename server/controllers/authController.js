@@ -173,6 +173,9 @@ const updateUserProfile = async (req, res) => {
 
         await user.save();
 
+        const profile = await UserProfile.findOne({ userId: user._id });
+        const onboardingCompleted = profile ? profile.onboardingCompleted : false;
+
         res.status(200).json({
             success: true,
             message: "Profile updated successfully",
@@ -182,6 +185,7 @@ const updateUserProfile = async (req, res) => {
                 email: user.email,
                 timezone: user.timezone,
                 settings: user.settings,
+                onboardingCompleted,
             },
         });
     } catch (error) {

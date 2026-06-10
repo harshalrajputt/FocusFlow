@@ -43,16 +43,16 @@ export default function Sidebar() {
 
     return (
         <aside
-            className="w-64 flex-shrink-0 flex flex-col min-h-screen"
-            style={{ background: '#080f1e', borderRight: '1px solid rgba(148,163,184,0.07)' }}
+            className="w-64 flex-shrink-0 flex flex-col min-h-screen transition-all duration-200"
+            style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-color)' }}
         >
             {/* Brand */}
-            <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: '1px solid rgba(148,163,184,0.07)' }}>
+            <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: '1px solid var(--border-color)' }}>
                 <div
                     className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
                     style={{
-                        background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                        boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
+                        background: 'var(--accent-gradient)',
+                        boxShadow: '0 4px 12px var(--accent-glow)',
                     }}
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -60,14 +60,14 @@ export default function Sidebar() {
                         <polyline points="12 7 12 12 15.5 13.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
-                <span className="text-lg font-extrabold tracking-tight text-slate-100">
-                    Focus<span className="text-violet-400">Flow</span>
+                <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100 brand-name">
+                    Focus<span className="text-sky-500 dark:text-sky-400">Flow</span>
                 </span>
             </div>
 
             {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-0.5">
-                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">Menu</p>
+                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-600">Menu</p>
                 {menuItems.map(item => (
                     <NavLink
                         key={item.name}
@@ -75,12 +75,12 @@ export default function Sidebar() {
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative no-underline group
                             ${isActive
-                                ? 'text-violet-300 border border-violet-500/20'
-                                : 'text-slate-500 hover:text-slate-200 border border-transparent hover:border-slate-800/60'
+                                ? 'text-sky-600 dark:text-sky-400 border border-sky-500/10 dark:border-sky-400/20'
+                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent hover:border-slate-200 dark:hover:border-slate-800/60'
                             }`
                         }
                         style={({ isActive }) => isActive ? {
-                            background: 'rgba(124,58,237,0.12)',
+                            background: 'var(--accent-glow)',
                         } : {}}
                     >
                         {({ isActive }) => (
@@ -89,15 +89,15 @@ export default function Sidebar() {
                                 {isActive && (
                                     <span
                                         className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-r-full"
-                                        style={{ background: '#7c3aed' }}
+                                        style={{ background: 'var(--accent-color)' }}
                                     />
                                 )}
-                                <span className={`transition-colors ${isActive ? 'text-violet-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                                <span className={`transition-colors ${isActive ? 'text-sky-500' : 'text-slate-600 dark:text-slate-500 group-hover:text-slate-850 dark:group-hover:text-slate-300'}`}>
                                     {item.icon}
                                 </span>
                                 <span>{item.name}</span>
                                 {isActive && (
-                                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />
+                                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
                                 )}
                             </>
                         )}
@@ -106,28 +106,28 @@ export default function Sidebar() {
             </nav>
 
             {/* User + Logout */}
-            <div className="px-3 pb-4" style={{ borderTop: '1px solid rgba(148,163,184,0.07)' }}>
+            <div className="px-3 pb-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                 {/* User card */}
                 <div
                     className="flex items-center gap-3 px-3 py-3 rounded-xl mt-3 mb-1"
-                    style={{ background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.06)' }}
+                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
                 >
                     <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                        style={{ background: 'var(--accent-gradient)' }}
                     >
                         {initials}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-slate-200 text-sm font-semibold truncate">{user?.name || "User"}</p>
-                        <p className="text-slate-600 text-xs truncate">{user?.email || ""}</p>
+                        <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold truncate">{user?.name || "User"}</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{user?.email || ""}</p>
                     </div>
                 </div>
 
                 {/* Logout */}
                 <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 transition-all duration-200"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 transition-all duration-200 cursor-pointer"
                     onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.background = ''; }}
                 >

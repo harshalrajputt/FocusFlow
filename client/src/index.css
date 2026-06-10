@@ -1,6 +1,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/* ===== COLOR DESIGN SYSTEM (RescueTime / Clockify aesthetic) ===== */
+:root {
+  /* LIGHT THEME (Default) */
+  --bg-primary: #f3f4f6;       /* Clean light gray */
+  --bg-secondary: #ffffff;     /* White card background */
+  --bg-tertiary: #e5e7eb;      /* Panel border grey */
+  --border-color: rgba(100, 116, 139, 0.12);
+  --border-hover: rgba(100, 116, 139, 0.2);
+  --text-primary: #0f172a;     /* Dark charcoal */
+  --text-secondary: #334155;   /* Slate blue secondary */
+  --text-muted: #64748b;       /* Muted gray */
+  --accent-color: #0284c7;     /* Clockify Sky Blue */
+  --accent-glow: rgba(2, 132, 199, 0.08);
+  --accent-gradient: linear-gradient(135deg, #0284c7, #0d9488); /* Blue to Teal */
+  --accent-hover: #0369a1;
+  --accent-light: #e0f2fe;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05);
+  
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(100, 116, 139, 0.08);
+  --glow-color: rgba(2, 132, 199, 0.02);
+}
+
+body.dark-theme {
+  /* DARK THEME */
+  --bg-primary: #0b111e;       /* Deep charcoal-navy */
+  --bg-secondary: #121826;     /* Slate card background */
+  --bg-tertiary: #1b2234;      /* Panel border grey */
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --text-primary: #f1f5f9;     /* Light slate */
+  --text-secondary: #94a3b8;   /* Slate grey */
+  --text-muted: #64748b;       /* Dark grey */
+  --accent-color: #38bdf8;     /* Light Sky Blue */
+  --accent-glow: rgba(56, 189, 248, 0.12);
+  --accent-gradient: linear-gradient(135deg, #0284c7, #0d9488);
+  --accent-hover: #7dd3fc;
+  --accent-light: rgba(56, 189, 248, 0.08);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.4);
+  
+  --glass-bg: rgba(18, 24, 38, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glow-color: rgba(56, 189, 248, 0.02);
+}
+
 /* ===== BASE OVERRIDES ===== */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -14,10 +65,11 @@
 
 body {
   margin: 0;
-  background: #020817;
-  color: #f1f5f9;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -28,24 +80,113 @@ body {
   text-align: left;
 }
 
+/* ===== COMPATIBILITY THEME ADAPTATION OVERRIDES ===== */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme .text-slate-100,
+body.light-theme .text-slate-200 {
+  color: var(--text-primary) !important;
+}
+
+body.light-theme p,
+body.light-theme span:not(.text-violet-400):not(.text-emerald-400):not(.text-emerald-300):not(.text-amber-400):not(.text-rose-400):not(.text-indigo-400):not(.text-indigo-300):not(.text-violet-300):not(.text-slate-500):not(.text-slate-600):not(.text-sky-500):not(.text-emerald-500):not(.text-rose-500),
+body.light-theme .text-slate-350,
+body.light-theme .text-slate-300,
+body.light-theme .text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+body.light-theme .text-slate-500,
+body.light-theme .text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+body.light-theme .bg-slate-900,
+body.light-theme .bg-\[\#0d1526\],
+body.light-theme .bg-\[\#0a1628\],
+body.light-theme .bg-\[\#020817\],
+body.light-theme .bg-slate-950\/80 {
+  background-color: var(--bg-secondary) !important;
+}
+
+body.light-theme .border-slate-800,
+body.light-theme .border-slate-900,
+body.light-theme .border-slate-850,
+body.light-theme .border-slate-950,
+body.light-theme .border-slate-200\/80,
+body.light-theme .border-slate-800\/60 {
+  border-color: var(--border-color) !important;
+}
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #080f1e; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ===== AUTOFILL FIX ===== */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 40px #0a1628 inset !important;
-  -webkit-text-fill-color: #f1f5f9 !important;
-  caret-color: #f1f5f9;
+/* ===== COMPACT SIDEBAR LAYOUT ===== */
+body.compact-sidebar aside {
+  width: 72px !important;
+}
+body.compact-sidebar aside span:not(.text-lg):not(.text-violet-400) {
+  display: none !important;
+}
+body.compact-sidebar aside .brand-name, 
+body.compact-sidebar aside .brand-name + span {
+  display: none !important;
+}
+body.compact-sidebar aside nav p {
+  display: none !important;
+}
+body.compact-sidebar aside nav a {
+  justify-content: center !important;
+  padding: 10px 0 !important;
+}
+body.compact-sidebar aside nav a span:last-child {
+  display: none !important;
+}
+body.compact-sidebar aside .min-w-0 {
+  display: none !important;
+}
+body.compact-sidebar aside button span {
+  display: none !important;
+}
+
+/* ===== DENSE LAYOUT ===== */
+body.dense-layout {
+  font-size: 13px !important;
+}
+body.dense-layout .p-6, body.dense-layout .p-8 {
+  padding: 16px !important;
+}
+body.dense-layout .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 16px !important;
+}
+body.dense-layout .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 12px !important;
+}
+body.dense-layout .gap-6 {
+  gap: 12px !important;
+}
+body.dense-layout .gap-4 {
+  gap: 8px !important;
+}
+
+/* ===== REDUCE MOTION ===== */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* ===== ANIMATIONS ===== */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeIn {
@@ -54,29 +195,28 @@ input:-webkit-autofill:focus {
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-7px); }
+  50%       { transform: translateY(-5px); }
 }
 @keyframes blob {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(30px, -20px) scale(1.07); }
-  66%       { transform: translate(-20px, 15px) scale(0.94); }
+  33%       { transform: translate(15px, -10px) scale(1.04); }
+  66%       { transform: translate(-10px, 8px) scale(0.96); }
 }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
-  50%       { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
 }
 
-.animate-fade-in-up  { animation: fadeInUp 0.45s cubic-bezier(.22,.68,0,1.2) both; }
-.animate-fade-in     { animation: fadeIn   0.35s ease both; }
-.animate-float       { animation: float  4s ease-in-out infinite; }
-.animate-spin-slow   { animation: spin   1s linear infinite; }
-.animate-blob        { animation: blob  10s ease-in-out infinite; }
+.animate-fade-in-up  { animation: fadeInUp 0.35s cubic-bezier(.25,.8,0.25,1) both; }
+.animate-fade-in     { animation: fadeIn   0.25s ease both; }
+.animate-float       { animation: float  3.5s ease-in-out infinite; }
+.animate-spin-slow   { animation: spin   1.2s linear infinite; }
+.animate-blob        { animation: blob   8s ease-in-out infinite; }
 .animate-pulse-dot   { animation: pulse-dot 2s ease-in-out infinite; }
 
-/* Stagger delays */
-.delay-1 { animation-delay: 0.06s; }
-.delay-2 { animation-delay: 0.12s; }
-.delay-3 { animation-delay: 0.18s; }
-.delay-4 { animation-delay: 0.24s; }
-.delay-5 { animation-delay: 0.30s; }
+.delay-1 { animation-delay: 0.04s; }
+.delay-2 { animation-delay: 0.08s; }
+.delay-3 { animation-delay: 0.12s; }
+.delay-4 { animation-delay: 0.16s; }
+.delay-5 { animation-delay: 0.20s; }

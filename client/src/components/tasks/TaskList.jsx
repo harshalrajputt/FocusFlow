@@ -1,6 +1,6 @@
 import TaskCard from "./TaskCard";
 
-const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)' };
+const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
 export default function TaskList({ tasks, loading, onEdit, onDelete, onStatusChange }) {
     if (loading) {
