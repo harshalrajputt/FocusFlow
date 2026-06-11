@@ -1,4 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+import { useSearchParams } from "react-router-dom";
+import { getProfile, upsertProfile } from "../services/profileService";
+
+
 import { updateUserProfile, updateUserPassword } from "../services/authService";
 import { applyAppearanceSettings } from "../utils/theme";
 
@@ -124,12 +129,25 @@ function Toast({ toast }) {
 
 const Settings = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const [active, setActive] = useState("profile");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabParam = searchParams.get("tab");
+    const [active, setActive] = useState(() => {
+        return tabParam && ["profile", "security", "notifications", "appearance", "extension"].includes(tabParam) ? tabParam : "profile";
+    });
+
+    useEffect(() => {
+        if (tabParam && ["profile", "security", "notifications", "appearance", "extension"].includes(tabParam)) {
+            setActive(tabParam);
+        }
+    }, [tabParam]);
+
     
     // Profile states
     const [name, setName] = useState(user.name || "");
     const [email, setEmail] = useState(user.email || "");
     const [timezone, setTimezone] = useState(user.timezone || "UTC+05:30 — India");
+    const [profilePicture, setProfilePicture] = useState(user.profilePicture || "");
+    const fileInputRef = useRef(null);
 
     // Security states
     const [passwords, setPasswords] = useState({
@@ -157,6 +175,11 @@ const Settings = () => {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
 
+    // Custom Extra Details states
+    const [customType, setCustomType] = useState("");
+    const [customDescription, setCustomDescription] = useState("");
+    const [loadingCustom, setLoadingCustom] = useState(false);
+
     const showToast = (message, type = "success") => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
@@ -170,7 +193,7 @@ const Settings = () => {
         }
         setLoading(true);
         try {
-            const res = await updateUserProfile({ name, email, timezone });
+            const res = await updateUserProfile({ name, email, timezone, profilePicture });
             if (res.data.success) {
                 const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
                 const updatedUser = { ...currentUser, ...res.data.user };
@@ -181,6 +204,55 @@ const Settings = () => {
             showToast(err.response?.data?.message || "Failed to update profile", "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            showToast("Image size must be less than 2MB", "error");
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProfilePicture(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    useEffect(() => {
+        // Load UserProfile for custom details
+        getProfile().then(res => {
+            if (res.data && res.data.data) {
+                const profile = res.data.data;
+                if (profile.customDetails) {
+                    setCustomType(profile.customDetails.type || "");
+                    setCustomDescription(profile.customDetails.description || "");
+                }
+            }
+        }).catch(err => {
+            console.error("Failed to load user profile details", err);
+        });
+    }, []);
+
+    const handleSaveCustomDetails = async (e) => {
+        e.preventDefault();
+        setLoadingCustom(true);
+        try {
+            const res = await upsertProfile({
+                customDetails: {
+                    type: customType,
+                    description: customDescription
+                }
+            });
+            if (res.data.success) {
+                showToast("Extra details saved successfully");
+            }
+        } catch (err) {
+            showToast(err.response?.data?.message || "Failed to save details", "error");
+        } finally {
+            setLoadingCustom(false);
         }
     };
 
@@ -287,7 +359,10 @@ const Settings = () => {
                         {SECTIONS.map(s => (
                             <button
                                 key={s.id}
-                                onClick={() => setActive(s.id)}
+                                onClick={() => {
+                                    setActive(s.id);
+                                    setSearchParams({ tab: s.id });
+                                }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                                 style={active === s.id
                                     ? { background: 'var(--accent-glow)', color: 'var(--accent-color)', border: '1px solid var(--border-color)' }
@@ -309,54 +384,103 @@ const Settings = () => {
 
                     {/* Profile */}
                     {active === "profile" && (
-                        <form onSubmit={handleSaveProfile} className="rounded-2xl overflow-hidden animate-fade-in-up" style={cardStyle}>
-                            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                <h2 className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Profile Information</h2>
-                            </div>
-                            <div className="p-5">
-                                {/* Avatar row */}
-                                <div className="flex items-center gap-5 pb-5 mb-1" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                    <div
-                                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
-                                        style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
-                                    >
-                                        {initials}
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold">{user?.name || "User"}</p>
-                                        <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{user?.email || ""}</p>
-                                        <button type="button" className="text-sky-500 hover:text-sky-600 text-xs mt-2 font-medium transition-colors border-none bg-transparent cursor-pointer">
-                                            Change avatar →
-                                        </button>
-                                    </div>
+                        <div className="space-y-6">
+                            <form onSubmit={handleSaveProfile} className="rounded-2xl overflow-hidden animate-fade-in-up" style={cardStyle}>
+                                <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <h2 className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Profile Information</h2>
                                 </div>
+                                <div className="p-5">
+                                    {/* Avatar row */}
+                                    <div className="flex items-center gap-5 pb-5 mb-1" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                        <div
+                                            className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0 overflow-hidden"
+                                            style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
+                                        >
+                                            {profilePicture ? (
+                                                <img src={profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                                            ) : (
+                                                initials
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold">{user?.name || "User"}</p>
+                                            <p className="text-slate-550 dark:text-slate-450 text-xs mt-0.5">{user?.email || ""}</p>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="text-sky-500 hover:text-sky-600 text-xs mt-2 font-medium transition-colors border-none bg-transparent cursor-pointer"
+                                            >
+                                                Change avatar →
+                                            </button>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleFileChange}
+                                                accept="image/*"
+                                                className="hidden"
+                                            />
+                                        </div>
+                                    </div>
 
-                                <Field label="Full Name" hint="Your display name across the app">
-                                    <div style={{ width: 220 }}>
-                                        <FInput value={name} onChange={e => setName(e.target.value)} required={true} placeholder="Your name" />
-                                    </div>
-                                </Field>
-                                <Field label="Email Address" hint="Used for login and notifications">
-                                    <div style={{ width: 220 }}>
-                                        <FInput type="email" value={email} onChange={e => setEmail(e.target.value)} required={true} placeholder="you@example.com" />
-                                    </div>
-                                </Field>
-                                <Field label="Timezone" hint="For accurate time tracking">
-                                    <select
-                                        value={timezone}
-                                        onChange={e => setTimezone(e.target.value)}
-                                        style={{ ...inputStyle, width: 220, cursor: 'pointer' }}
-                                    >
-                                        <option value="UTC+05:30 — India">UTC+05:30 — India</option>
-                                        <option value="UTC+00:00 — London">UTC+00:00 — London</option>
-                                        <option value="UTC-05:00 — New York">UTC-05:00 — New York</option>
-                                        <option value="UTC-08:00 — LA">UTC-08:00 — LA</option>
-                                    </select>
-                                </Field>
-                                <SaveButton loading={loading} />
-                            </div>
-                        </form>
+                                    <Field label="Full Name" hint="Your display name across the app">
+                                        <div style={{ width: 220 }}>
+                                            <FInput value={name} onChange={e => setName(e.target.value)} required={true} placeholder="Your name" />
+                                        </div>
+                                    </Field>
+                                    <Field label="Email Address" hint="Used for login and notifications">
+                                        <div style={{ width: 220 }}>
+                                            <FInput type="email" value={email} onChange={e => setEmail(e.target.value)} required={true} placeholder="you@example.com" />
+                                        </div>
+                                    </Field>
+                                    <Field label="Timezone" hint="For accurate time tracking">
+                                        <select
+                                            value={timezone}
+                                            onChange={e => setTimezone(e.target.value)}
+                                            style={{ ...inputStyle, width: 220, cursor: 'pointer' }}
+                                        >
+                                            <option value="UTC+05:30 — India">UTC+05:30 — India</option>
+                                            <option value="UTC+00:00 — London">UTC+00:00 — London</option>
+                                            <option value="UTC-05:00 — New York">UTC-05:00 — New York</option>
+                                            <option value="UTC-08:00 — LA">UTC-08:00 — LA</option>
+                                        </select>
+                                    </Field>
+                                    <SaveButton loading={loading} />
+                                </div>
+                            </form>
+
+                            {/* Extra Details Card */}
+                            <form onSubmit={handleSaveCustomDetails} className="rounded-2xl overflow-hidden animate-fade-in-up" style={cardStyle}>
+                                <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <h2 className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Extra Custom Details</h2>
+                                </div>
+                                <div className="p-5">
+                                    <p className="text-xs text-slate-500 mb-4">
+                                        Share additional details about your study style, classes, or timing constraints to help generate a more specific weekly schedule table for you.
+                                    </p>
+                                    <Field label="Detail Type" hint="e.g., Exam Prep, Research, Job Shift">
+                                        <div style={{ width: 220 }}>
+                                            <FInput value={customType} onChange={e => setCustomType(e.target.value)} placeholder="Type of detail" />
+                                        </div>
+                                    </Field>
+                                    <Field label="Description" hint="Describe your schedule/needs in detail">
+                                        <div style={{ width: 220 }}>
+                                            <textarea 
+                                                value={customDescription} 
+                                                onChange={e => setCustomDescription(e.target.value)} 
+                                                placeholder="e.g. Preparing for GRE, morning shifts on Mon/Wed..."
+                                                style={{ ...inputStyle, width: 220, resize: 'none', height: 80 }}
+                                            />
+                                        </div>
+                                    </Field>
+                                    <SaveButton label="Save Extra Details" loading={loadingCustom} />
+                                </div>
+                            </form>
+                        </div>
                     )}
 
                     {/* Security */}

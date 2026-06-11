@@ -119,6 +119,7 @@ const loginUser = async (req, res) => {
                 email: user.email,
                 timezone: user.timezone,
                 settings: user.settings,
+                profilePicture: user.profilePicture || "",
                 onboardingCompleted,
             },
         });
@@ -144,7 +145,7 @@ const updateUserProfile = async (req, res) => {
             });
         }
 
-        const { name, email, timezone, settings } = req.body;
+        const { name, email, timezone, settings, profilePicture } = req.body;
 
         if (name !== undefined) user.name = name.trim();
         if (email !== undefined) {
@@ -158,6 +159,7 @@ const updateUserProfile = async (req, res) => {
             user.email = email.trim();
         }
         if (timezone !== undefined) user.timezone = timezone;
+        if (profilePicture !== undefined) user.profilePicture = profilePicture;
         if (settings !== undefined) {
             user.settings = {
                 notifications: {
@@ -185,6 +187,7 @@ const updateUserProfile = async (req, res) => {
                 email: user.email,
                 timezone: user.timezone,
                 settings: user.settings,
+                profilePicture: user.profilePicture || "",
                 onboardingCompleted,
             },
         });
@@ -249,9 +252,85 @@ const updateUserPassword = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found with this email" });
+        }
+
+        // Generate a 6-digit numeric OTP
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        
+        // Save OTP and set expiry (10 minutes)
+        user.resetOTP = otp;
+        user.resetOTPExpires = new Date(Date.now() + 10 * 60 * 1000);
+        await user.save();
+
+        console.log(`[PASSWORD RESET OTP] Generated OTP for ${email}: ${otp}`);
+
+        // In dev mode, return the OTP directly in response for local convenience
+        return res.status(200).json({
+            success: true,
+            message: "A 6-digit verification code has been generated.",
+            devOTP: otp // returning this for local copy-paste
+        });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        return res.status(500).json({ success: false, message: "Server error during password reset" });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ success: false, message: "All fields are required" });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Check if OTP matches and is not expired
+        if (!user.resetOTP || user.resetOTP !== otp || !user.resetOTPExpires || user.resetOTPExpires < Date.now()) {
+            return res.status(400).json({ success: false, message: "Invalid or expired verification code" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        // Clear OTP fields
+        user.resetOTP = null;
+        user.resetOTPExpires = null;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Password reset successful. You can now login with your new password."
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        return res.status(500).json({ success: false, message: "Server error resetting password" });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     updateUserProfile,
     updateUserPassword,
+    forgotPassword,
+    resetPassword,
 };

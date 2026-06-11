@@ -220,3 +220,15 @@ body.reduce-motion *::after {
 .delay-3 { animation-delay: 0.12s; }
 .delay-4 { animation-delay: 0.16s; }
 .delay-5 { animation-delay: 0.20s; }
+
+/* Slide In/Out animations for Extension promoter toast */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(120%); }
+}
+.animate-slide-in-right { animation: slideInRight 0.4s cubic-bezier(.25,.8,0.25,1) both; }
+.animate-slide-out-right { animation: slideOutRight 0.4s cubic-bezier(.25,.8,0.25,1) both; }

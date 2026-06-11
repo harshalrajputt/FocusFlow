@@ -26,17 +26,29 @@ const userSchema = new mongoose.Schema(
         settings: {
             notifications: {
                 sessionReminders: { type: Boolean, default: true },
-                taskDueAlerts:    { type: Boolean, default: true },
-                weeklySummary:     { type: Boolean, default: false },
-                breakReminders:   { type: Boolean, default: true },
-                soundEffects:     { type: Boolean, default: true }
+                taskDueAlerts: { type: Boolean, default: true },
+                weeklySummary: { type: Boolean, default: false },
+                breakReminders: { type: Boolean, default: true },
+                soundEffects: { type: Boolean, default: true }
             },
             appearance: {
-                theme:          { type: String, default: "Dark (default)" },
+                theme: { type: String, default: "Dark (default)" },
                 compactSidebar: { type: Boolean, default: false },
-                reduceMotion:   { type: Boolean, default: false },
-                denseLayout:    { type: Boolean, default: false }
+                reduceMotion: { type: Boolean, default: false },
+                denseLayout: { type: Boolean, default: false }
             }
+        },
+        resetOTP: {
+            type: String,
+            default: null
+        },
+        resetOTPExpires: {
+            type: Date,
+            default: null
+        },
+        profilePicture: {
+            type: String,
+            default: ""
         }
     },
     {

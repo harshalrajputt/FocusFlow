@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
 import { getProfile, upsertProfile, completeOnboarding } from "../services/profileService";
 
 // Styled Components / Constants matching settings.jsx
@@ -58,6 +59,8 @@ const TagsInput = ({ tags, setTags, placeholder }) => {
 
 export default function Onboarding() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isEditMode = new URLSearchParams(location.search).get("edit") === "true";
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -111,8 +114,12 @@ export default function Onboarding() {
                     if (data.productivity) setProductivity(prev => ({ ...prev, ...data.productivity }));
                     if (data.focus) setFocus(prev => ({ ...prev, ...data.focus }));
                     if (data.goals) setGoals(prev => ({ ...prev, ...data.goals }));
-                    if (data.onboardingStep) setStep(data.onboardingStep);
-                    if (data.onboardingCompleted) {
+                    if (data.onboardingStep && !isEditMode) {
+                        setStep(data.onboardingStep);
+                    } else if (isEditMode) {
+                        setStep(1);
+                    }
+                    if (data.onboardingCompleted && !isEditMode) {
                         // User has already completed onboarding, redirect to dashboard
                         const user = JSON.parse(localStorage.getItem("user") || "{}");
                         user.onboardingCompleted = true;

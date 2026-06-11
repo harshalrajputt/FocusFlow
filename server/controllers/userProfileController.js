@@ -26,7 +26,7 @@ const upsertProfile = async (req, res) => {
             profile = new UserProfile({ userId: req.user.id });
         }
 
-        const { basic, schedule, productivity, focus, goals, onboardingStep } = req.body;
+        const { basic, schedule, productivity, focus, goals, onboardingStep, customDetails } = req.body;
 
         if (basic) {
             profile.basic = { ...profile.basic, ...basic };
@@ -42,6 +42,9 @@ const upsertProfile = async (req, res) => {
         }
         if (goals) {
             profile.goals = { ...profile.goals, ...goals };
+        }
+        if (customDetails) {
+            profile.customDetails = { ...profile.customDetails, ...customDetails };
         }
         if (onboardingStep !== undefined) {
             profile.onboardingStep = onboardingStep;

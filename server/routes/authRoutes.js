@@ -25,10 +25,14 @@ const {
   loginUser,
   updateUserProfile,
   updateUserPassword,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 // Profile and security updates
 router.put("/profile", protect, updateUserProfile);

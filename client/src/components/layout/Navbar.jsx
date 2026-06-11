@@ -208,6 +208,19 @@ export default function Navbar() {
                     </svg>
                 </button>
 
+                {/* Download Extension Shortcut */}
+                <a
+                    href="http://localhost:5000/api/download-extension"
+                    title="Download Chrome Extension Companion"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30"
+                    style={{ background: 'rgba(100, 116, 139, 0.05)', border: '1px solid var(--border-color)' }}
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-2-2h-5a2 2 0 0 0-2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2z" />
+                        <path d="M14 6V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2" />
+                    </svg>
+                </a>
+
                 {/* Notifications Bell */}
                 <div className="relative" ref={notifRef}>
                     <button
@@ -285,13 +298,17 @@ export default function Navbar() {
                 <div className="relative" ref={profileRef}>
                     <div
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transition-all duration-200"
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transition-all duration-200 overflow-hidden shrink-0"
                         style={{
                             background: 'var(--accent-gradient)',
                             boxShadow: '0 0 0 2px var(--border-color)',
                         }}
                     >
-                        {initials}
+                        {user.profilePicture ? (
+                            <img src={user.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            initials
+                        )}
                     </div>
 
                     {/* Profile Dropdown */}
@@ -302,8 +319,12 @@ export default function Navbar() {
                         >
                             {/* Profile Info block */}
                             <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ background: 'var(--accent-gradient)' }}>
-                                    {initials}
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold overflow-hidden shrink-0" style={{ background: 'var(--accent-gradient)' }}>
+                                    {user.profilePicture ? (
+                                        <img src={user.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        initials
+                                    )}
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs font-bold truncate">{user?.name || "Focus User"}</p>
@@ -320,7 +341,7 @@ export default function Navbar() {
                                     ⚙️ Settings
                                 </button>
                                 <button
-                                    onClick={() => { setShowProfileMenu(false); navigate("/onboarding"); }}
+                                    onClick={() => { setShowProfileMenu(false); navigate("/onboarding?edit=true"); }}
                                     className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                                 >
                                     🎓 Edit Student Profile

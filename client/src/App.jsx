@@ -6,6 +6,7 @@ import MainLayout from "./components/layout/MainLayout";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
@@ -33,6 +34,11 @@ function App() {
         <Route
           path="/register"
           element={<Register />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
         />
 
         <Route element={<ProtectedRoute />}>

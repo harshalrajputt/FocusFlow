@@ -28,3 +28,11 @@ export const updateUserProfile = (profileData) => {
 export const updateUserPassword = (passwordData) => {
     return API.put("/password", passwordData);
 };
+
+export const forgotPassword = (emailData) => {
+    return API.post("/forgot-password", emailData);
+};
+
+export const resetPassword = (resetData) => {
+    return API.post("/reset-password", resetData);
+};

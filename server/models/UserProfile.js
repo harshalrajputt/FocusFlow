@@ -73,6 +73,10 @@ const userProfileSchema = new mongoose.Schema(
             skillsToLearn: { type: [String], default: [] },
             studyStyle: { type: String, default: "Pomodoro Technique" }
         },
+        customDetails: {
+            type: { type: String, default: "" },
+            description: { type: String, default: "" }
+        },
         onboardingCompleted: { type: Boolean, default: false },
         onboardingStep: { type: Number, default: 1 }
     },
