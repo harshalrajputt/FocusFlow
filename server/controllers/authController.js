@@ -288,7 +288,7 @@ const forgotPassword = async (req, res) => {
 
         // Generate a 6-digit numeric OTP
         const otp = String(Math.floor(100000 + Math.random() * 900000));
-        
+
         // Save OTP and set expiry (10 minutes)
         user.resetOTP = otp;
         user.resetOTPExpires = new Date(Date.now() + 10 * 60 * 1000);
@@ -372,8 +372,8 @@ const searchUsers = async (req, res) => {
                 { email: { $regex: query, $options: "i" } }
             ]
         })
-        .select("name email profilePicture xp streak")
-        .limit(10);
+            .select("name email profilePicture xp streak")
+            .limit(10);
 
         res.status(200).json({
             success: true,
