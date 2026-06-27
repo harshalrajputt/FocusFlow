@@ -3,9 +3,50 @@ import Navbar from "./Navbar";
 import { Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { applyAppearanceSettings } from "../../utils/theme";
+import { getMissedSessions } from "../../services/scheduleService";
+import MissedSessionModal from "../schedule/MissedSessionModal";
 
 export default function MainLayout() {
     const [showToast, setShowToast] = useState(false);
+    const [missedSessions, setMissedSessions] = useState([]);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const checkMissed = async () => {
+        try {
+            const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const now = new Date();
+            const dayName = weekdays[now.getDay()];
+            const dateStr = now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const res = await getMissedSessions({ date: dateStr, dayName, currentTime: timeStr });
+            if (res.data?.success && res.data.missedSessions?.length > 0) {
+                setMissedSessions(res.data.missedSessions);
+                setModalOpen(true);
+            }
+        } catch (err) {
+            console.error("Failed to check for missed focus sessions:", err);
+        }
+    };
+
+    useEffect(() => {
+        // Run check on mount
+        checkMissed();
+
+        // Polling check every 5 minutes
+        const interval = setInterval(checkMissed, 300000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleRecovered = (recoveredId) => {
+        setMissedSessions(prev => {
+            const remaining = prev.filter(s => s._id !== recoveredId);
+            if (remaining.length === 0) {
+                setModalOpen(false);
+            }
+            return remaining;
+        });
+    };
 
     useEffect(() => {
         try {
@@ -115,6 +156,13 @@ export default function MainLayout() {
                     </div>
                 </div>
             )}
+            {/* Missed Session Modal */}
+            <MissedSessionModal 
+                isOpen={modalOpen}
+                missedSessions={missedSessions}
+                onRecovered={handleRecovered}
+                onClose={() => setModalOpen(false)}
+            />
         </div>
     );
 }

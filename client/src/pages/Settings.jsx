@@ -6,6 +6,7 @@ import { getProfile, upsertProfile } from "../services/profileService";
 
 import { updateUserProfile, updateUserPassword } from "../services/authService";
 import { applyAppearanceSettings } from "../utils/theme";
+import ProtectedBlocksManager from "../components/schedule/ProtectedBlocksManager";
 
 const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 const inputStyle = {
@@ -18,6 +19,10 @@ const SECTIONS = [
     {
         id: "profile", label: "Profile",
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    },
+    {
+        id: "lifestyle", label: "Lifestyle Blocks",
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     },
     {
         id: "security", label: "Security",
@@ -132,11 +137,11 @@ const Settings = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const tabParam = searchParams.get("tab");
     const [active, setActive] = useState(() => {
-        return tabParam && ["profile", "security", "notifications", "appearance", "extension"].includes(tabParam) ? tabParam : "profile";
+        return tabParam && ["profile", "lifestyle", "security", "notifications", "appearance", "extension"].includes(tabParam) ? tabParam : "profile";
     });
 
     useEffect(() => {
-        if (tabParam && ["profile", "security", "notifications", "appearance", "extension"].includes(tabParam)) {
+        if (tabParam && ["profile", "lifestyle", "security", "notifications", "appearance", "extension"].includes(tabParam)) {
             setActive(tabParam);
         }
     }, [tabParam]);
@@ -653,6 +658,25 @@ const Settings = () => {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Lifestyle Blocks */}
+                    {active === "lifestyle" && (
+                        <div className="rounded-2xl overflow-hidden animate-fade-in-up" style={cardStyle}>
+                            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                                <h2 className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Lifestyle & Leisure Blocks</h2>
+                            </div>
+                            <div className="p-5">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+                                    Define recurring activities (e.g., Gym, gaming, or social commitments) where you want to protect your calendar from being scheduled for work or study. FocusFlow will automatically build your schedule around these blocks.
+                                </p>
+                                <ProtectedBlocksManager />
                             </div>
                         </div>
                     )}

@@ -36,3 +36,7 @@ export const forgotPassword = (emailData) => {
 export const resetPassword = (resetData) => {
     return API.post("/reset-password", resetData);
 };
+
+export const searchUsers = (query) => {
+    return API.get(`/search?q=${query}`);
+};

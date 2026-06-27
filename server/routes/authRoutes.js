@@ -27,6 +27,7 @@ const {
   updateUserPassword,
   forgotPassword,
   resetPassword,
+  searchUsers,
 } = require("../controllers/authController");
 
 router.post("/register", registerUser);
@@ -37,5 +38,6 @@ router.post("/reset-password", resetPassword);
 // Profile and security updates
 router.put("/profile", protect, updateUserProfile);
 router.put("/password", protect, updateUserPassword);
+router.get("/search", protect, searchUsers);
 
 module.exports = router;

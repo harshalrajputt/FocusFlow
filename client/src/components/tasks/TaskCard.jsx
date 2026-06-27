@@ -1,4 +1,5 @@
 const PRIORITY_CONFIG = {
+    Critical: { color: '#7c3aed', bg: 'rgba(124,58,237,0.12)', border: 'rgba(124,58,237,0.25)', dot: '#7c3aed' },
     High:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    border: 'rgba(239,68,68,0.25)',    dot: '#ef4444' },
     Medium: { color: '#d97706', bg: 'rgba(245,158,11,0.12)',   border: 'rgba(245,158,11,0.25)',   dot: '#d97706' },
     Low:    { color: '#10b981', bg: 'rgba(16,185,129,0.12)',   border: 'rgba(16,185,129,0.25)',   dot: '#10b981' },
@@ -104,6 +105,34 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange }) {
                             <span className="w-1.5 h-1.5 rounded-full" style={{ background: priority.dot }} />
                             {task.priority}
                         </span>
+
+                        {/* Skip Cost */}
+                        {task.skipCost && (
+                            <span
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                style={{
+                                    color: task.skipCost === "High" ? "#ef4444" : task.skipCost === "Medium" ? "#d97706" : "#10b981",
+                                    background: 'var(--bg-primary)',
+                                    border: '1px solid var(--border-color)'
+                                }}
+                            >
+                                Cost: {task.skipCost}
+                            </span>
+                        )}
+
+                        {/* Flexibility */}
+                        {task.flexibility && (
+                            <span
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                style={{
+                                    color: task.flexibility === "Fixed" ? "#38bdf8" : "var(--text-muted)",
+                                    background: 'var(--bg-primary)',
+                                    border: '1px solid var(--border-color)'
+                                }}
+                            >
+                                {task.flexibility}
+                            </span>
+                        )}
 
                         {/* Status */}
                         <span

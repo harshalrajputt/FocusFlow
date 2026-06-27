@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getSchedule, regenerateSchedule } from "../services/scheduleService";
+import { getSchedule, regenerateSchedule, getAdaptiveSuggestions } from "../services/scheduleService";
 
 const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
@@ -71,6 +71,7 @@ export default function Schedule() {
     const [regenerating, setRegenerating] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
 
     const fetchScheduleData = async () => {
         try {
@@ -86,8 +87,20 @@ export default function Schedule() {
         }
     };
 
+    const fetchSuggestionsData = async () => {
+        try {
+            const response = await getAdaptiveSuggestions();
+            if (response.data?.success) {
+                setSuggestions(response.data.suggestions || []);
+            }
+        } catch (err) {
+            console.error("Failed to load adaptive suggestions", err);
+        }
+    };
+
     useEffect(() => {
         fetchScheduleData();
+        fetchSuggestionsData();
     }, []);
 
     const handleRegenerate = async () => {
@@ -256,6 +269,28 @@ export default function Schedule() {
 
                 {/* Info block: Right column */}
                 <div className="space-y-6 animate-fade-in-up delay-3">
+
+                    {/* Adaptive Recommendations Block */}
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Adaptive Suggestions</p>
+                        <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
+                            <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                                <span>⚡</span> Lifestyle-Aware Learning
+                            </h3>
+                            <div className="space-y-3 text-xs text-[var(--text-secondary)] leading-relaxed">
+                                {suggestions.length === 0 ? (
+                                    <p className="text-[var(--text-muted)] italic">Gathering weekly focus trends. Keep studying to unlock personalized advice!</p>
+                                ) : (
+                                    suggestions.map((sug, i) => (
+                                        <div key={i} className="p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)]">
+                                            <p className="font-extrabold text-[var(--text-primary)]">{sug.title}</p>
+                                            <p className="text-[11px] text-[var(--text-muted)] mt-1">{sug.message}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
                     
                     {/* Insights Block */}
                     <div>

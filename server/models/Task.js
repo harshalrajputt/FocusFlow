@@ -18,8 +18,20 @@ const taskSchema = new mongoose.Schema(
 
         priority: {
             type: String,
-            enum: ["Low", "Medium", "High"],
+            enum: ["Critical", "High", "Medium", "Low"],
             default: "Medium",
+        },
+
+        skipCost: {
+            type: String,
+            enum: ["High", "Medium", "Low"],
+            default: "Medium",
+        },
+
+        flexibility: {
+            type: String,
+            enum: ["Fixed", "SemiFlexible", "Flexible"],
+            default: "Flexible",
         },
 
         status: {
@@ -33,6 +45,10 @@ const taskSchema = new mongoose.Schema(
             default: null,
         },
 
+        shareWithPod: {
+            type: Boolean,
+            default: true,
+        },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

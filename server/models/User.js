@@ -49,6 +49,22 @@ const userSchema = new mongoose.Schema(
         profilePicture: {
             type: String,
             default: ""
+        },
+        resetOTPRequests: {
+            count: { type: Number, default: 0 },
+            lastRequestDate: { type: Date, default: null }
+        },
+        xp: {
+            type: Number,
+            default: 0
+        },
+        streak: {
+            type: Number,
+            default: 0
+        },
+        lastActiveDate: {
+            type: String,
+            default: ""
         }
     },
     {

@@ -77,6 +77,15 @@ const userProfileSchema = new mongoose.Schema(
             type: { type: String, default: "" },
             description: { type: String, default: "" }
         },
+        protectedBlocks: [
+            {
+                name: { type: String, required: true },
+                start: { type: String, required: true }, // "HH:MM"
+                end: { type: String, required: true }, // "HH:MM"
+                repeat: { type: [String], default: [] }, // days of the week, e.g. ["Monday", "Tuesday"]
+                isLocked: { type: Boolean, default: true }
+            }
+        ],
         onboardingCompleted: { type: Boolean, default: false },
         onboardingStep: { type: Number, default: 1 }
     },

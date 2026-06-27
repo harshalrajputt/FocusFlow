@@ -60,7 +60,7 @@ const getTaskById = async (req, res) => {
 // ─── CREATE task ─────────────────────────────────────────────────────────────
 const createTask = async (req, res) => {
     try {
-        const { title, description, priority, status, dueDate } = req.body;
+        const { title, description, priority, status, dueDate, skipCost, flexibility } = req.body;
 
         if (!title || !title.trim()) {
             return res.status(400).json({
@@ -75,6 +75,8 @@ const createTask = async (req, res) => {
             priority:    priority  || "Medium",
             status:      status    || "Pending",
             dueDate:     dueDate   || null,
+            skipCost:    skipCost  || "Medium",
+            flexibility: flexibility || "Flexible",
             userId:      req.user.id,
         });
 
@@ -109,7 +111,7 @@ const updateTask = async (req, res) => {
             });
         }
 
-        const { title, description, priority, status, dueDate } = req.body;
+        const { title, description, priority, status, dueDate, skipCost, flexibility } = req.body;
 
         const wasCompletedBefore = task.status === "Completed";
 
@@ -118,6 +120,8 @@ const updateTask = async (req, res) => {
         if (priority !== undefined)    task.priority    = priority;
         if (status !== undefined)      task.status      = status;
         if (dueDate !== undefined)     task.dueDate     = dueDate || null;
+        if (skipCost !== undefined)    task.skipCost    = skipCost;
+        if (flexibility !== undefined) task.flexibility = flexibility;
 
         await task.save();
 

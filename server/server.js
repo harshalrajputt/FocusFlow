@@ -15,6 +15,7 @@ const scheduleRoutes = require("./routes/scheduleRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const websiteUsageRoutes = require("./routes/websiteUsageRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const podRoutes = require("./routes/podRoutes");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/schedule", scheduleRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/website-usage", websiteUsageRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/pods", podRoutes);
 
 const PORT = process.env.PORT || 5000;
 

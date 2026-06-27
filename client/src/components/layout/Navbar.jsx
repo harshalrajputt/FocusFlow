@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { getTasks } from "../../services/taskService";
 import { getNotifications, markNotificationRead, clearNotification } from "../../services/notificationService";
+import { getPendingInvites, respondToInvite } from "../../services/podService";
 
 export default function Navbar() {
     const navigate = useNavigate();
@@ -30,6 +31,44 @@ export default function Navbar() {
     const [notifications, setNotifications] = useState([]);
 
     const notificationCount = notifications.filter(n => !n.read).length;
+
+    // Pod Invites States
+    const [pendingInvites, setPendingInvites] = useState([]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const fetchInvites = () => {
+            getPendingInvites().then(res => {
+                setPendingInvites(res.data.invites || []);
+            }).catch(err => {
+                console.error("Error fetching invites in Navbar:", err);
+            });
+        };
+
+        fetchInvites();
+        const interval = setInterval(fetchInvites, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleAcceptInvite = async (inviteId) => {
+        try {
+            await respondToInvite(inviteId, true);
+            setPendingInvites(prev => prev.filter(i => i._id !== inviteId));
+        } catch (e) {
+            console.error("Error accepting invite:", e);
+        }
+    };
+
+    const handleDeclineInvite = async (inviteId) => {
+        try {
+            await respondToInvite(inviteId, false);
+            setPendingInvites(prev => prev.filter(i => i._id !== inviteId));
+        } catch (e) {
+            console.error("Error declining invite:", e);
+        }
+    };
 
     // Click Out Refs
     const profileRef = useRef(null);
@@ -164,15 +203,38 @@ export default function Navbar() {
     };
 
     return (
-        <header
-            className="h-16 flex items-center justify-between px-6 sticky top-0 z-20 gap-4"
-            style={{
-                background: 'var(--glass-bg)',
-                borderBottom: '1px solid var(--glass-border)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-            }}
-        >
+        <>
+            {/* Pending Invites Banner */}
+            {pendingInvites.length > 0 && (
+                <div className="bg-sky-500 text-white text-[11px] font-bold px-6 py-2 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-md animate-fade-in">
+                    <span className="truncate">
+                        👥 You have been invited to join "{pendingInvites[0].podId?.name}" by {pendingInvites[0].fromUserId?.name}!
+                    </span>
+                    <div className="flex gap-2 flex-shrink-0">
+                        <button
+                            onClick={() => handleDeclineInvite(pendingInvites[0]._id)}
+                            className="bg-sky-600 hover:bg-sky-700 px-2 py-0.5 rounded transition cursor-pointer text-white"
+                        >
+                            Decline
+                        </button>
+                        <button
+                            onClick={() => handleAcceptInvite(pendingInvites[0]._id)}
+                            className="bg-white text-sky-600 hover:bg-sky-50 px-2 py-0.5 rounded transition cursor-pointer"
+                        >
+                            Accept
+                        </button>
+                    </div>
+                </div>
+            )}
+            <header
+                className="h-16 flex items-center justify-between px-6 sticky top-0 z-20 gap-4"
+                style={{
+                    background: 'var(--glass-bg)',
+                    borderBottom: '1px solid var(--glass-border)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                }}
+            >
             {/* Left Greeting */}
             <div className="min-w-0">
                 <p className="text-slate-800 dark:text-slate-100 font-semibold text-sm truncate">
@@ -269,7 +331,7 @@ export default function Navbar() {
                                             }`}
                                         >
                                             <span className="text-xs mt-0.5">
-                                                {n.type === 'missed_session' ? '⚠️' : n.type === 'tip' ? '💡' : '⚡'}
+                                                {n.type === 'missed_session' ? '⚠️' : n.type === 'tip' ? '💡' : n.type === 'pod' ? '👥' : '⚡'}
                                             </span>
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-xs leading-relaxed ${n.read ? 'font-normal' : 'font-semibold text-slate-900 dark:text-slate-100'}`}>
@@ -443,5 +505,6 @@ export default function Navbar() {
                 </div>
             )}
         </header>
+        </>
     );
 }

@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 const FocusSession = require("../models/FocusSession");
+const User = require("../models/User");
+const Pod = require("../models/Pod");
+const PodActivity = require("../models/PodActivity");
+const Notification = require("../models/Notification");
+const Task = require("../models/Task");
 
 // ─── LOG focus session ────────────────────────────────────────────────────────
 const logSession = async (req, res) => {
@@ -54,6 +59,150 @@ const logSession = async (req, res) => {
             const minutesFocused = Math.round(duration / 60);
             if (minutesFocused > 0) {
                 await trackGoalProgress(req.user.id, "FocusMinutes", minutesFocused);
+            }
+
+            // --- SOCIAL PODS GAMIFICATION HOOK ---
+            try {
+                // Determine XP to award today, capped at 100 XP per calendar day
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+
+                const completedTodayCount = await FocusSession.countDocuments({
+                    userId: req.user.id,
+                    sessionType: "Focus",
+                    completed: true,
+                    startTime: { $gte: startOfToday }
+                });
+
+                // Award 10 XP if user hasn't completed more than 10 sessions today
+                let xpEarned = 0;
+                if (completedTodayCount <= 10) {
+                    xpEarned = 10;
+                }
+
+                // Update User's profile XP & Streaks
+                const user = await User.findById(req.user.id);
+                if (user) {
+                    const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+                    if (user.lastActiveDate !== todayStr) {
+                        const yesterdayStr = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString("en-CA");
+                        if (user.lastActiveDate === yesterdayStr) {
+                            user.streak += 1;
+                        } else {
+                            user.streak = 1;
+                        }
+                        user.lastActiveDate = todayStr;
+                    }
+                    user.xp = (user.xp || 0) + xpEarned;
+                    await user.save();
+                }
+
+                // Process updates for all Pods this user belongs to
+                if (user) {
+                    const userPods = await Pod.find({ "members.userId": req.user.id });
+                    for (const pod of userPods) {
+                        // 1. Update challenges
+                        if (xpEarned > 0) {
+                            pod.challenges.forEach(challenge => {
+                                if (challenge.status === "active") {
+                                    const currentContrib = challenge.progress.get(req.user.id) || 0;
+                                    challenge.progress.set(req.user.id, currentContrib + xpEarned);
+
+                                    // Sum up total XP contributed to challenge
+                                    let totalContributed = 0;
+                                    challenge.progress.forEach((val) => {
+                                        totalContributed += val;
+                                    });
+
+                                    if (totalContributed >= challenge.targetXP) {
+                                        challenge.status = "completed";
+                                        const endAct = new PodActivity({
+                                            podId: pod._id,
+                                            userId: req.user.id,
+                                            type: "challenge",
+                                            message: `The group challenge "${challenge.title}" has been COMPLETED! 🎉`
+                                        });
+                                        endAct.save().catch(err => console.error("Error saving challenge complete log:", err));
+                                    }
+                                }
+                            });
+                        }
+
+                        // 2. Check and update Pod Streak
+                        const todayStr = new Date().toLocaleDateString("en-CA");
+                        if (pod.lastActiveDate !== todayStr) {
+                            const memberIds = pod.members.map(m => m.userId);
+                            const activeMembersToday = await FocusSession.distinct("userId", {
+                                userId: { $in: memberIds },
+                                sessionType: "Focus",
+                                completed: true,
+                                startTime: { $gte: startOfToday }
+                            });
+
+                            if (activeMembersToday.length === memberIds.length) {
+                                const yesterdayStr = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString("en-CA");
+                                if (pod.lastActiveDate === yesterdayStr) {
+                                    pod.streak += 1;
+                                } else {
+                                    pod.streak = 1;
+                                }
+                                pod.lastActiveDate = todayStr;
+
+                                const streakAct = new PodActivity({
+                                    podId: pod._id,
+                                    userId: req.user.id,
+                                    type: "challenge",
+                                    message: `Amazing! Everyone completed their sessions today! Pod streak is now ${pod.streak} days! 🚀`
+                                });
+                                await streakAct.save();
+                            }
+                        }
+
+                        await pod.save();
+
+                        // 3. Log activity feed message (privacy-aware)
+                        let taskDetail = "a task";
+                        let share = true;
+                        if (taskId) {
+                            const taskObj = await Task.findById(taskId);
+                            if (taskObj) {
+                                share = taskObj.shareWithPod !== false;
+                                if (share) {
+                                    taskDetail = `"${taskObj.title}"`;
+                                }
+                            }
+                        }
+
+                        const feedMessage = share
+                            ? `${user.name} completed a study session for ${taskDetail} (+${xpEarned} XP)`
+                            : `${user.name} completed a study session for a private task (+${xpEarned} XP)`;
+
+                        const act = new PodActivity({
+                            podId: pod._id,
+                            userId: req.user.id,
+                            type: "completion",
+                            message: feedMessage
+                        });
+                        await act.save();
+
+                        // 4. Send notifications to other pod members
+                        const otherMembers = pod.members.filter(m => m.userId.toString() !== req.user.id);
+                        const notifications = otherMembers.map(m => ({
+                            userId: m.userId,
+                            title: "Pod Member Progress!",
+                            message: share
+                                ? `${user.name} completed focus session for ${taskDetail}!`
+                                : `${user.name} completed a private focus session!`,
+                            type: "pod",
+                            read: false
+                        }));
+                        if (notifications.length > 0) {
+                            await Notification.insertMany(notifications);
+                        }
+                    }
+                }
+            } catch (podErr) {
+                console.error("Error in FocusSocialPod gamification hook:", podErr);
             }
         }
 

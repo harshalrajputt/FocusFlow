@@ -24,3 +24,15 @@ export const regenerateSchedule = () => {
 export const updateSchedule = (scheduleData) => {
     return API.put("/", scheduleData);
 };
+
+export const getMissedSessions = (params) => {
+    return API.get("/missed-sessions", { params });
+};
+
+export const recoverSession = (data) => {
+    return API.post("/recover", data);
+};
+
+export const getAdaptiveSuggestions = () => {
+    return API.get("/adaptive-suggestions");
+};

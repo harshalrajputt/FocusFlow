@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const UserProfile = require("../models/UserProfile");
 const bcrypt = require("bcryptjs");
+const { sendOTPEmail } = require("../utils/emailService");
+
 
 const registerUser = async (req, res) => {
     try {
@@ -264,6 +266,26 @@ const forgotPassword = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found with this email" });
         }
 
+        // Daily OTP Rate Limit Check (maximum 2 requests per calendar day)
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (user.resetOTPRequests && user.resetOTPRequests.lastRequestDate && user.resetOTPRequests.lastRequestDate >= todayStart) {
+            if (user.resetOTPRequests.count >= 2) {
+                return res.status(429).json({
+                    success: false,
+                    message: "You have exceeded the maximum limit of 2 password reset requests per day."
+                });
+            }
+            user.resetOTPRequests.count += 1;
+        } else {
+            user.resetOTPRequests = {
+                count: 1,
+                lastRequestDate: now
+            };
+        }
+        user.resetOTPRequests.lastRequestDate = now;
+
         // Generate a 6-digit numeric OTP
         const otp = String(Math.floor(100000 + Math.random() * 900000));
         
@@ -274,11 +296,15 @@ const forgotPassword = async (req, res) => {
 
         console.log(`[PASSWORD RESET OTP] Generated OTP for ${email}: ${otp}`);
 
-        // In dev mode, return the OTP directly in response for local convenience
+        // Send Email
+        await sendOTPEmail(email, otp);
+
+        // Return response (include devOTP if no SMTP_USER or SMTP_PASS configured for easier dev testing)
+        const smtpConfigured = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
         return res.status(200).json({
             success: true,
             message: "A 6-digit verification code has been generated.",
-            devOTP: otp // returning this for local copy-paste
+            ...(smtpConfigured ? {} : { devOTP: otp })
         });
     } catch (error) {
         console.error("Forgot password error:", error);
@@ -326,6 +352,42 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const searchUsers = async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query || query.trim() === "") {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required"
+            });
+        }
+
+        // Exclude current user from search
+        const currentUserId = req.user.id;
+
+        const users = await User.find({
+            _id: { $ne: currentUserId },
+            $or: [
+                { name: { $regex: query, $options: "i" } },
+                { email: { $regex: query, $options: "i" } }
+            ]
+        })
+        .select("name email profilePicture xp streak")
+        .limit(10);
+
+        res.status(200).json({
+            success: true,
+            users
+        });
+    } catch (error) {
+        console.error("Search users error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error searching users"
+        });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
@@ -333,4 +395,5 @@ module.exports = {
     updateUserPassword,
     forgotPassword,
     resetPassword,
+    searchUsers,
 };

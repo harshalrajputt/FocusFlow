@@ -15,6 +15,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import Schedule from "./pages/Schedule";
+import Pods from "./pages/Pods";
 
 function App() {
   return (
@@ -76,6 +77,11 @@ function App() {
             <Route
               path="/schedule"
               element={<Schedule />}
+            />
+
+            <Route
+              path="/pods"
+              element={<Pods />}
             />
 
           </Route>

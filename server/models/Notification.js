@@ -17,7 +17,7 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ["missed_session", "tip", "system"],
+            enum: ["missed_session", "tip", "system", "pod"],
             default: "system"
         },
         read: {
