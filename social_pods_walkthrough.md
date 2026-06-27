@@ -6,6 +6,50 @@ Below is a detailed breakdown of the components, database upgrades, controller l
 
 ---
 
+## Guide for New Users & Practical Use Cases
+
+If you are new to FocusFlow Social Pods, here is how you can get started and how pods function in action.
+
+### How to Use Social Pods: A Step-by-Step Guide
+1. **Create or Join a Pod**: Go to the **Social Pods** tab in the sidebar. If you are not in a pod yet, click **Form a Study Pod**. Enter a name and an encouraging description.
+2. **Invite Your Friends**: Once your pod is active, click **Invite Friends** on the dashboard. Type in their name or email to send an in-app invite.
+3. **Accepting Invites**: When your friends log in, they will see a prominent banner at the top of their screen notifying them of the invite. Tapping **Accept** instantly joins them to the pod dashboard.
+4. **Study & Earn XP**: Start focus sessions from your dashboard or Chrome extension. Every completed study session rewards you with **10 XP** (up to a daily maximum of 100 XP) and logs an update to the pod feed.
+5. **Team Up on Challenges**: Click **Start Challenge** to create a group quest (e.g., "Midterm Prep" targeting 150 XP by Friday). Every member's focus session contributions will advance the group progress bar.
+6. **Support Your Crew**: Check the leaderboard. If a friend is lagging, send them a Poke (👉) nudge. If they finish a major study block, celebrate by sending a Clap (👏) nudge!
+
+---
+
+### Real-World Use Cases
+
+#### Use Case 1: Preparing for Finals with Group Quests
+* **Scenario**: Alice, Bob, and Carol are studying for their upcoming Computer Science final exam.
+* **Flow**:
+  - Alice forms a pod called *"CS Final Destroyers"* and invites Bob and Carol.
+  - She sets up a group challenge: *"Calculus & DSA Prep"* with a target of **300 collective XP** before Friday.
+  - Whenever Bob completes a 25-minute Pomodoro session studying algorithms, the pod's live feed updates: *"Bob completed a study session for 'DSA Practice' (+10 XP)"*.
+  - The challenge progress bar moves up to `10/300`.
+  - Seeing Bob study, Carol feels motivated, starts her session, and completes it, pushing the progress bar further. By working together, they hit the 300 XP target, unlocking the completed quest achievement.
+
+#### Use Case 2: The Daily Streak Accountability Loop
+* **Scenario**: Khushal wants to build a consistent study habit without missing days, but struggles with staying motivated on weekends.
+* **Flow**:
+  - Khushal joins a pod with his friends.
+  - To maintain their **Pod Streak**, every single member of the pod must complete at least one focus session every calendar day.
+  - On Sunday evening, Khushal hasn't studied yet. He receives an in-app notification saying: *"Virat poked you! Time to get to work!"*.
+  - Khushal opens the app, starts a focus session on his task, and completes it.
+  - The pod streak is saved, maintaining their 5-day streak and logging: *"Amazing! Everyone completed their sessions today! Pod streak is now 6 days! 🚀"*.
+
+#### Use Case 3: Privacy-Aware Study Session
+* **Scenario**: Harshal wants to study a sensitive or personal task, but doesn't want his friends in the pod to see the title of what he is working on.
+* **Flow**:
+  - When creating a task for his personal chore, Harshal unchecks the **"Share session completions with my Pod"** option in the Task Form.
+  - He starts and completes a focus session on this task.
+  - He still earns 10 XP towards his personal level and the active group challenges.
+  - In the pod's feed, it is announced anonymously: *"Harshal completed a study session for a private task (+10 XP)"*. His friends know he is working hard, but the private details remain hidden.
+
+---
+
 ## 1. Mongoose Database Models
 
 ### 1.1 [Pod.js](file:///d:/Personal/FocusFlow/server/models/Pod.js) (New)
