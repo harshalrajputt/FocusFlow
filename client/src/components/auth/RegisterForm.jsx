@@ -111,7 +111,21 @@ export default function RegisterForm() {
                         className={`${inputBase} pr-11`}
                         onFocus={focusStyle} onBlur={blurStyle}
                     />
-                    <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors">
+                    <button
+                        type="button"
+                        onClick={() => setShowPwd(!showPwd)}
+                        className="text-slate-600 hover:text-slate-300 transition-colors"
+                        style={{
+                            position: 'absolute',
+                            right: '14px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            zIndex: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
                         <EyeIcon open={showPwd} />
                     </button>
                 </div>
@@ -139,7 +153,21 @@ export default function RegisterForm() {
                         className={`w-full bg-[var(--bg-primary)] border rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] outline-none transition-all duration-200 pl-10 pr-11 py-3 ${pwdMismatch ? 'border-red-500/50' : pwdMatch ? 'border-emerald-500/50' : 'border-[var(--border-color)]'}`}
                         onFocus={focusStyle} onBlur={blurStyle}
                     />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors">
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirm(!showConfirm)}
+                        className="text-slate-600 hover:text-slate-300 transition-colors"
+                        style={{
+                            position: 'absolute',
+                            right: '14px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            zIndex: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
                         <EyeIcon open={showConfirm} />
                     </button>
                     {pwdMatch && (
