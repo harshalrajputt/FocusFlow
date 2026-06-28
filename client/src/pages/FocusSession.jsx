@@ -421,16 +421,18 @@ const FocusSession = () => {
 
             {/* Timer Ring */}
             <div className="flex flex-col items-center gap-8 animate-fade-in-up delay-2">
-                <div className="relative" style={{ width: 220, height: 220 }}>
-                    {/* Glow behind ring */}
+                <div className="relative" style={{ width: 240, height: 240 }}>
+                    {/* Outer breathing glow */}
                     <div
-                        className="absolute inset-0 rounded-full"
+                        className={`absolute inset-[-15px] rounded-full ${running ? 'animate-breathe' : ''}`}
                         style={{
-                            background: `radial-gradient(circle, ${mode.ringGlow} 0%, transparent 65%)`,
-                            filter: 'blur(20px)',
+                            background: `radial-gradient(circle, ${mode.ringGlow} 0%, transparent 60%)`,
+                            filter: 'blur(25px)',
+                            opacity: running ? 0.8 : 0.3,
+                            transition: 'opacity 0.5s ease',
                         }}
                     />
-                    <svg width="220" height="220" style={{ transform: 'rotate(-90deg)' }}>
+                    <svg width="240" height="240" style={{ transform: 'rotate(-90deg)' }}>
                         <defs>
                             <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stopColor={mode.ringColor} />
@@ -438,26 +440,29 @@ const FocusSession = () => {
                             </linearGradient>
                         </defs>
                         {/* Track */}
-                        <circle cx="110" cy="110" r={R} fill="none" stroke="rgba(148,163,184,0.08)" strokeWidth="8" />
+                        <circle cx="120" cy="120" r={R} fill="none" stroke="rgba(148,163,184,0.06)" strokeWidth="6" />
                         {/* Progress */}
                         <circle
-                            cx="110" cy="110" r={R}
+                            cx="120" cy="120" r={R}
                             fill="none"
                             stroke="url(#ringGrad)"
-                            strokeWidth="8"
+                            strokeWidth="7"
                             strokeLinecap="round"
                             strokeDasharray={circ}
                             strokeDashoffset={dash}
-                            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.4s' }}
+                            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.4s', filter: `drop-shadow(0 0 6px ${mode.ringGlow})` }}
                         />
                     </svg>
 
                     {/* Timer text */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="font-mono font-bold text-[var(--text-primary)] text-5xl tracking-tight">{mins}:{secs}</span>
-                        <span className="text-[var(--text-muted)] text-sm mt-1 font-medium">{mode.label}</span>
+                        <span className="font-mono font-extrabold text-[var(--text-primary)] text-5xl tracking-tighter">{mins}:{secs}</span>
+                        <span className="text-[var(--text-muted)] text-sm mt-1 font-semibold tracking-wide uppercase text-[10px]">{mode.label}</span>
                         {running && (
-                            <span className="text-xs mt-2 font-semibold animate-pulse" style={{ color: mode.ringColor }}>● Live</span>
+                            <span className="text-xs mt-2.5 font-bold animate-pulse-dot flex items-center gap-1.5" style={{ color: mode.ringColor }}>
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: mode.ringColor }} />
+                                Live
+                            </span>
                         )}
                     </div>
                 </div>

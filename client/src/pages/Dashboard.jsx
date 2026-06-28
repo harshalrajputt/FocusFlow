@@ -177,23 +177,23 @@ export default function Dashboard() {
                 {buildStatCards(taskStats, focusSummary, webStats).map((s, i) => (
                     <div
                         key={s.label}
-                        className={`animate-fade-in-up delay-${i + 1} rounded-2xl p-5 relative overflow-hidden cursor-default transition-all duration-300`}
+                        className={`animate-fade-in-up delay-${i + 1} rounded-2xl p-5 relative overflow-hidden cursor-default transition-all duration-400 stat-card-glow group`}
                         style={{
                             background: 'var(--bg-secondary)',
                             border: '1px solid var(--border-color)',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 12px 32px ${s.glow}`; e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)'; e.currentTarget.style.boxShadow = `0 16px 40px ${s.glow}, 0 0 0 1px var(--border-hover)`; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
                     >
                         {/* Glow */}
-                        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
+                        <div className="absolute inset-0 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
                         <div className="relative z-10">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style={{ background: s.iconBg }}>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110" style={{ background: s.iconBg }}>
                                 {s.icon}
                             </div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{s.label}</p>
-                            <p className="text-4xl font-bold" style={{ color: s.valueColor }}>{s.value}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{s.sub}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-1">{s.label}</p>
+                            <p className="text-4xl font-extrabold tracking-tight" style={{ color: s.valueColor }}>{s.value}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{s.sub}</p>
                         </div>
                     </div>
                 ))}

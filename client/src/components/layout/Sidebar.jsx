@@ -1,4 +1,5 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import FocusFlowIcon from "../../assets/FocusFlowIcon.png";
 
 
 const menuItems = [
@@ -66,22 +67,18 @@ export default function Sidebar() {
 
     return (
         <aside
-            className="w-64 flex-shrink-0 flex flex-col min-h-screen transition-all duration-200"
+            className="w-64 flex-shrink-0 flex flex-col min-h-screen transition-all duration-300"
             style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-color)' }}
         >
             {/* Brand */}
-            <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <div
-                    className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
-                    style={{
-                        background: 'var(--accent-gradient)',
-                        boxShadow: '0 4px 12px var(--accent-glow)',
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2.2" />
-                        <polyline points="12 7 12 12 15.5 13.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+            <div className="flex items-center gap-3 px-5 py-5 group" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <div className="relative">
+                    <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-sky-500/20 to-teal-500/20 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-500" />
+                    <img 
+                        src={FocusFlowIcon} 
+                        alt="FocusFlow Logo" 
+                        className="relative w-9 h-9 object-contain flex-shrink-0 rounded-xl transition-transform duration-300 group-hover:scale-110"
+                    />
                 </div>
                 <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100 brand-name">
                     Focus<span className="text-sky-500 dark:text-sky-400">Flow</span>
@@ -90,35 +87,36 @@ export default function Sidebar() {
 
             {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-0.5">
-                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-600">Menu</p>
-                {menuItems.map(item => {
+                <p className="px-3 mb-3 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600">Navigation</p>
+                {menuItems.map((item, idx) => {
                     const active = isItemActive(item);
                     return (
                         <NavLink
                             key={item.name}
                             to={item.path}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative no-underline group
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative no-underline group
                                 ${active
-                                    ? 'text-sky-600 dark:text-sky-400 border border-sky-500/10 dark:border-sky-400/20'
-                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent hover:border-slate-200 dark:hover:border-slate-800/60'
+                                    ? 'text-sky-600 dark:text-sky-400 border border-sky-500/15 dark:border-sky-400/20'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent hover:border-[var(--border-hover)]'
                                 }`}
                             style={active ? {
                                 background: 'var(--accent-glow)',
+                                boxShadow: '0 2px 12px var(--accent-glow)',
                             } : {}}
                         >
-                            {/* Active bar */}
+                            {/* Active gradient bar */}
                             {active && (
                                 <span
-                                    className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-r-full"
-                                    style={{ background: 'var(--accent-color)' }}
+                                    className="absolute left-0 top-[20%] bottom-[20%] w-[3px] rounded-r-full"
+                                    style={{ background: 'var(--accent-gradient)' }}
                                 />
                             )}
-                            <span className={`transition-colors ${active ? 'text-sky-500' : 'text-slate-600 dark:text-slate-500 group-hover:text-slate-850 dark:group-hover:text-slate-300'}`}>
+                            <span className={`transition-all duration-300 ${active ? 'text-sky-500 scale-110' : 'text-slate-500 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-300 group-hover:scale-110'}`}>
                                 {item.icon}
                             </span>
                             <span>{item.name}</span>
                             {active && (
-                                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
+                                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400 animate-pulse-dot" />
                             )}
                         </NavLink>
                     );

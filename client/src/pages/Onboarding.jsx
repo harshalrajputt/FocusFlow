@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import FocusFlowIcon from "../assets/FocusFlowIcon.png";
 
 import { getProfile, upsertProfile, completeOnboarding } from "../services/profileService";
 
@@ -268,11 +269,11 @@ export default function Onboarding() {
             {/* Logo and Header */}
             <div className="w-full max-w-xl text-center mb-8 z-10 animate-fade-in">
                 <div className="inline-flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-                        <svg className="text-white w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                        </svg>
-                    </div>
+                    <img 
+                        src={FocusFlowIcon} 
+                        alt="FocusFlow Logo" 
+                        className="w-8 h-8 object-contain rounded-lg shadow-lg"
+                    />
                     <span className="text-lg font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-300">
                         FOCUSFLOW
                     </span>

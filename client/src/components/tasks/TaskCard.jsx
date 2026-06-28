@@ -34,15 +34,22 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange }) {
 
     return (
         <div
-            className="group rounded-xl p-4 transition-all duration-200"
+            className="group rounded-xl p-4 transition-all duration-300 relative overflow-hidden"
             style={{
                 background: isCompleted ? 'var(--bg-primary)' : 'var(--bg-secondary)',
                 border: '1px solid var(--border-color)',
-                opacity: isCompleted ? 0.7 : 1,
+                opacity: isCompleted ? 0.65 : 1,
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = ''; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
         >
+            {/* Left accent strip */}
+            {!isCompleted && (
+                <div 
+                    className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{ background: `linear-gradient(180deg, ${priority.color}, ${priority.color}66)` }}
+                />
+            )}
             <div className="flex items-start gap-3">
                 {/* Status toggle checkbox */}
                 <button
