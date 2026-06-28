@@ -88,7 +88,7 @@ function syncLogsToBackend() {
             
             if (logList.length === 0) return;
             
-            fetch("http://localhost:5000/api/website-usage/log", {
+            fetch("https://focusflow-backend-liuf.onrender.com/api/website-usage/log", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

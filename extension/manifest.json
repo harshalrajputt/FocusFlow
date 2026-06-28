@@ -11,6 +11,8 @@
     "idle"
   ],
   "host_permissions": [
+    "https://focusflow-backend-liuf.onrender.com/*",
+    "https://focus-flow-flame-five.vercel.app/*",
     "http://localhost:5000/*",
     "http://localhost:5173/*",
     "http://localhost:5174/*"

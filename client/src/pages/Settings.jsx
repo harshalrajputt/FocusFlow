@@ -134,6 +134,9 @@ function Toast({ toast }) {
 
 const Settings = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const downloadUrl = apiBase.endsWith('/api') ? apiBase.substring(0, apiBase.length - 4) + "/api/download-extension" : apiBase + "/api/download-extension";
+
     const [searchParams, setSearchParams] = useSearchParams();
     const tabParam = searchParams.get("tab");
     const [active, setActive] = useState(() => {
@@ -594,7 +597,7 @@ const Settings = () => {
                                         </div>
                                     </div>
                                     <a
-                                        href="http://localhost:5000/api/download-extension"
+                                        href={downloadUrl}
                                         className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-lg shadow-sky-500/15 whitespace-nowrap self-stretch sm:self-auto no-underline"
                                         style={{ background: 'var(--accent-gradient)' }}
                                         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px var(--accent-glow)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}

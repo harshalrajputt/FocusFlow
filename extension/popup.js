@@ -1,4 +1,4 @@
-const BACKEND_URL = "http://localhost:5000/api";
+const BACKEND_URL = "https://focusflow-backend-liuf.onrender.com/api";
 
 // DOM Elements
 const authScreen = document.getElementById("auth-screen");

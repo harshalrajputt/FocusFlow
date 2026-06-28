@@ -100,7 +100,8 @@ const getInsights = async (req, res) => {
                 neutral_time_monthly: neutMonthly
             };
 
-            const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
+            const mlServiceUrl = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
+            const mlResponse = await fetch(`${mlServiceUrl}/predict`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(mlPayload)

@@ -22,6 +22,9 @@ export default function Navbar() {
     const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
     const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const downloadUrl = apiBase.endsWith('/api') ? apiBase.substring(0, apiBase.length - 4) + "/api/download-extension" : apiBase + "/api/download-extension";
+
     const initials = user?.name
         ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
         : "U";
@@ -292,7 +295,7 @@ export default function Navbar() {
 
                 {/* Download Extension Shortcut */}
                 <a
-                    href="http://localhost:5000/api/download-extension"
+                    href={downloadUrl}
                     title="Download Chrome Extension Companion"
                     className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30"
                     style={{ background: 'rgba(100, 116, 139, 0.05)', border: '1px solid var(--border-color)' }}

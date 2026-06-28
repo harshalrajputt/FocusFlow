@@ -91,7 +91,9 @@ export default function MainLayout() {
     const handleDownloadNow = () => {
         localStorage.setItem("focusflow_ext_status", "downloaded");
         setShowToast(false);
-        window.location.href = "http://localhost:5000/api/download-extension";
+        const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const rootBase = apiBase.endsWith('/api') ? apiBase.substring(0, apiBase.length - 4) : apiBase;
+        window.location.href = `${rootBase}/api/download-extension`;
     };
 
     const handleAlreadyDownloaded = () => {
