@@ -2,6 +2,11 @@
 
 FocusFlow is a comprehensive, machine-learning-driven study planner, behavioral tracking system, and social accountability platform. Unlike generic blockers or manual timers, FocusFlow bridges the gap between schedule planning and actual behavioral enforcement through a Chrome Extension telemetry layer, a responsive React web dashboard, a scikit-learn random forest predictive model, and peer-to-peer social accountability pods.
 
+## 🌐 Live Production Deployments
+* **Vite React Web App**: [https://focus-flow-flame-five.vercel.app](https://focus-flow-flame-five.vercel.app)
+* **Express API Server**: [https://focusflow-backend-liuf.onrender.com](https://focusflow-backend-liuf.onrender.com)
+* **Python ML Service**: [https://focusflow-ml-service.onrender.com](https://focusflow-ml-service.onrender.com)
+
 ---
 
 ## 🏗️ System Architecture
