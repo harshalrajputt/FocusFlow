@@ -29,7 +29,35 @@ let isRunning = false;
 let startTimeStamp = null;
 
 // Initialize
-chrome.storage.local.get(["token", "timerState"], (result) => {
+chrome.storage.local.get(["token", "timerState", "customSettings"], (result) => {
+    // Load custom settings
+    let customSettings = result.customSettings || {
+        focusTime: 25,
+        shortTime: 5,
+        longTime: 15,
+        blockedSites: ["youtube.com", "instagram.com", "facebook.com", "reddit.com", "netflix.com"],
+        allowedSites: ["google.com", "github.com", "localhost"]
+    };
+
+    // Update inputs in popup
+    document.getElementById("cfg-focus-time").value = customSettings.focusTime;
+    document.getElementById("cfg-short-time").value = customSettings.shortTime;
+    document.getElementById("cfg-long-time").value = customSettings.longTime;
+    document.getElementById("cfg-blocked-sites").value = customSettings.blockedSites.join(", ");
+    document.getElementById("cfg-allowed-sites").value = customSettings.allowedSites.join(", ");
+
+    // Override DURATIONS
+    DURATIONS[0] = customSettings.focusTime * 60;
+    DURATIONS[1] = customSettings.shortTime * 60;
+    DURATIONS[2] = customSettings.longTime * 60;
+
+    // Send update configs to background on start
+    chrome.runtime.sendMessage({
+        type: "UPDATE_CONFIGS",
+        blockedSites: customSettings.blockedSites,
+        allowedSites: customSettings.allowedSites
+    });
+
     if (result.token) {
         showTimerScreen(result.token);
         // Force background script to flush active telemetry to the server
@@ -41,6 +69,7 @@ chrome.storage.local.get(["token", "timerState"], (result) => {
     if (result.timerState) {
         restoreTimerState(result.timerState);
     } else {
+        remainingSeconds = DURATIONS[currentModeIdx];
         updateTimerDisplay();
     }
 });
@@ -157,18 +186,22 @@ async function syncDistractionsBlocker(token) {
                 "Daydreaming / Loss of Focus": []
             };
 
-            let domains = ["youtube.com", "instagram.com", "netflix.com"]; // defaults
-            rawDist.forEach(d => {
-                if (domainMap[d]) {
-                    domains = [...domains, ...domainMap[d]];
-                }
-            });
-            const uniqueDomains = [...new Set(domains)];
-            
-            // Send blocklist to background worker
-            chrome.runtime.sendMessage({
-                type: "START_FOCUS",
-                blockedSites: uniqueDomains
+            chrome.storage.local.get("customSettings", (res) => {
+                let domains = (res.customSettings && res.customSettings.blockedSites) || ["youtube.com", "instagram.com", "netflix.com"];
+                let allowed = (res.customSettings && res.customSettings.allowedSites) || [];
+
+                rawDist.forEach(d => {
+                    if (domainMap[d]) {
+                        domains = [...domains, ...domainMap[d]];
+                    }
+                });
+                const uniqueDomains = [...new Set(domains)];
+                
+                chrome.runtime.sendMessage({
+                    type: "START_FOCUS",
+                    blockedSites: uniqueDomains,
+                    allowedSites: allowed
+                });
             });
         }
     } catch (err) {
@@ -373,3 +406,68 @@ function restoreTimerState(state) {
         updateTimerDisplay();
     }
 }
+
+// Collapsible Panel Toggling
+const toggleSettingsBtn = document.getElementById("toggle-settings-btn");
+const settingsPanel = document.getElementById("settings-panel");
+
+toggleSettingsBtn.addEventListener("click", () => {
+    if (settingsPanel.style.display === "none") {
+        settingsPanel.style.display = "block";
+        toggleSettingsBtn.innerText = "▲ Hide Settings";
+    } else {
+        settingsPanel.style.display = "none";
+        toggleSettingsBtn.innerText = "⚙ Configure Settings";
+    }
+});
+
+// Save Custom Configurations
+document.getElementById("save-settings-btn").addEventListener("click", () => {
+    const focusTime = parseInt(document.getElementById("cfg-focus-time").value) || 25;
+    const shortTime = parseInt(document.getElementById("cfg-short-time").value) || 5;
+    const longTime = parseInt(document.getElementById("cfg-long-time").value) || 15;
+
+    const blockedInput = document.getElementById("cfg-blocked-sites").value;
+    const allowedInput = document.getElementById("cfg-allowed-sites").value;
+
+    const blockedSites = blockedInput.split(",")
+        .map(s => s.trim().toLowerCase())
+        .filter(s => s.length > 0);
+
+    const allowedSites = allowedInput.split(",")
+        .map(s => s.trim().toLowerCase())
+        .filter(s => s.length > 0);
+
+    const customSettings = {
+        focusTime,
+        shortTime,
+        longTime,
+        blockedSites,
+        allowedSites
+    };
+
+    chrome.storage.local.set({ customSettings }, () => {
+        // Update DURATIONS
+        DURATIONS[0] = focusTime * 60;
+        DURATIONS[1] = shortTime * 60;
+        DURATIONS[2] = longTime * 60;
+
+        // Update display if timer is not running
+        if (!isRunning) {
+            remainingSeconds = DURATIONS[currentModeIdx];
+            updateTimerDisplay();
+        }
+
+        // Send to background
+        chrome.runtime.sendMessage({
+            type: "UPDATE_CONFIGS",
+            blockedSites,
+            allowedSites
+        });
+
+        alert("Configuration saved successfully!");
+        settingsPanel.style.display = "none";
+        toggleSettingsBtn.innerText = "⚙ Configure Settings";
+    });
+});
+

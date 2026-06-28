@@ -10,6 +10,15 @@ let blockedSites = [
     "twitch.tv",
     "roblox.com"
 ];
+let allowedSites = [];
+
+// Load custom config if present on startup
+chrome.storage.local.get("customSettings", (res) => {
+    if (res.customSettings) {
+        if (res.customSettings.blockedSites) blockedSites = res.customSettings.blockedSites;
+        if (res.customSettings.allowedSites) allowedSites = res.customSettings.allowedSites;
+    }
+});
 
 // Telemetry State
 let activeDomain = null;
@@ -122,14 +131,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.blockedSites && request.blockedSites.length > 0) {
             blockedSites = request.blockedSites;
         }
+        if (request.allowedSites) {
+            allowedSites = request.allowedSites;
+        }
         blockActiveTabs();
-        sendResponse({ status: "focused", blocked: blockedSites });
+        sendResponse({ status: "focused", blocked: blockedSites, allowed: allowedSites });
     } else if (request.type === "STOP_FOCUS") {
         isFocusActive = false;
         syncLogsToBackend(); // Flush logs immediately at end of session
         sendResponse({ status: "idle" });
     } else if (request.type === "GET_STATUS") {
-        sendResponse({ isFocusActive, blockedSites });
+        sendResponse({ isFocusActive, blockedSites, allowedSites });
+    } else if (request.type === "UPDATE_CONFIGS") {
+        if (request.blockedSites) {
+            blockedSites = request.blockedSites;
+        }
+        if (request.allowedSites) {
+            allowedSites = request.allowedSites;
+        }
+        if (isFocusActive) {
+            blockActiveTabs();
+        }
+        sendResponse({ status: "updated", blocked: blockedSites, allowed: allowedSites });
     } else if (request.type === "FORCE_SYNC") {
         syncLogsToBackend();
         sendResponse({ status: "synced" });
@@ -144,6 +167,10 @@ function checkAndBlockTab(tabId, url) {
         const urlObj = new URL(url);
         const domain = urlObj.hostname.replace("www.", "");
         
+        // Check whitelist first
+        const isAllowed = allowedSites.some(site => domain.includes(site));
+        if (isAllowed) return;
+
         const isBlocked = blockedSites.some(site => domain.includes(site));
         if (isBlocked) {
             chrome.tabs.update(tabId, {

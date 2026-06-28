@@ -238,7 +238,43 @@
                 </select>
             </div>
 
-            <button id="logout-btn" class="btn-secondary">Disconnect Account</button>
+            <!-- Settings Accordion Toggle -->
+            <button id="toggle-settings-btn" class="btn-secondary">⚙ Configure Settings</button>
+
+            <!-- Collapsible Settings Panel -->
+            <div id="settings-panel" style="display: none; margin-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.08); padding-top: 12px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase; color: #a78bfa; letter-spacing: 0.5px;">Custom Durations (mins)</h4>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                        <label>Focus</label>
+                        <input type="number" id="cfg-focus-time" min="1" max="180" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Short</label>
+                        <input type="number" id="cfg-short-time" min="1" max="60" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Long</label>
+                        <input type="number" id="cfg-long-time" min="1" max="120" style="width: 100%;">
+                    </div>
+                </div>
+
+                <h4 style="margin: 0 0 2px 0; font-size: 11px; text-transform: uppercase; color: #a78bfa; letter-spacing: 0.5px;">Distraction Blocklist</h4>
+                <p style="font-size: 9px; color: #64748b; margin: 0 0 6px 0;">Comma-separated domains to block</p>
+                <div class="form-group">
+                    <textarea id="cfg-blocked-sites" rows="2" style="width: 100%; background: #0a1628; border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 8px; color: #f1f5f9; font-size: 11px; padding: 6px; box-sizing: border-box; resize: vertical; font-family: inherit; outline: none;"></textarea>
+                </div>
+
+                <h4 style="margin: 0 0 2px 0; font-size: 11px; text-transform: uppercase; color: #a78bfa; letter-spacing: 0.5px;">Useful Whitelist</h4>
+                <p style="font-size: 9px; color: #64748b; margin: 0 0 6px 0;">Domains to never block (e.g. google.com)</p>
+                <div class="form-group">
+                    <textarea id="cfg-allowed-sites" rows="2" style="width: 100%; background: #0a1628; border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 8px; color: #f1f5f9; font-size: 11px; padding: 6px; box-sizing: border-box; resize: vertical; font-family: inherit; outline: none;"></textarea>
+                </div>
+
+                <button id="save-settings-btn" class="btn-primary" style="margin-top: 4px;">Save Configs</button>
+            </div>
+
+            <button id="logout-btn" class="btn-secondary" style="margin-top: 12px;">Disconnect Account</button>
         </div>
     </div>
 
