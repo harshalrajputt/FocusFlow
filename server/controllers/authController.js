@@ -2,6 +2,13 @@ const User = require("../models/User");
 const UserProfile = require("../models/UserProfile");
 const bcrypt = require("bcryptjs");
 const { sendOTPEmail } = require("../utils/emailService");
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 
 const registerUser = async (req, res) => {
@@ -161,7 +168,26 @@ const updateUserProfile = async (req, res) => {
             user.email = email.trim();
         }
         if (timezone !== undefined) user.timezone = timezone;
-        if (profilePicture !== undefined) user.profilePicture = profilePicture;
+        if (profilePicture !== undefined) {
+            if (profilePicture && profilePicture.startsWith("data:image/")) {
+                try {
+                    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+                        const uploadResponse = await cloudinary.uploader.upload(profilePicture, {
+                            folder: "focusflow_avatars",
+                            resource_type: "image"
+                        });
+                        user.profilePicture = uploadResponse.secure_url;
+                    } else {
+                        user.profilePicture = profilePicture;
+                    }
+                } catch (cloudinaryErr) {
+                    console.error("Cloudinary upload failed, falling back to base64:", cloudinaryErr);
+                    user.profilePicture = profilePicture;
+                }
+            } else {
+                user.profilePicture = profilePicture;
+            }
+        }
         if (settings !== undefined) {
             user.settings = {
                 notifications: {
