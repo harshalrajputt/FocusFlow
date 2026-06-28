@@ -4,6 +4,15 @@ import { getTasks } from "../../services/taskService";
 import { getNotifications, markNotificationRead, clearNotification } from "../../services/notificationService";
 import { getPendingInvites, respondToInvite } from "../../services/podService";
 
+const SHORTCUTS = [
+    { label: "⚡ Focus Session Timer", path: "/focus", desc: "Start Pomodoro clock", keywords: ["focus", "timer", "pomodoro", "session", "work", "study"] },
+    { label: "📊 Analytics Dashboard", path: "/analytics", desc: "View focus diagnostics", keywords: ["analytics", "dashboard", "stats", "charts", "ml", "coach"] },
+    { label: "🗓️ Study baseline schedule", path: "/schedule", desc: "View baseline schedule", keywords: ["schedule", "calendar", "timetable", "baseline", "lifestyle"] },
+    { label: "⚙️ User settings", path: "/settings", desc: "Manage timezone & display", keywords: ["settings", "profile", "password", "theme", "extension"] },
+    { label: "📋 Tasks Manager", path: "/tasks", desc: "View and manage tasks", keywords: ["tasks", "todo", "list", "jobs", "backlog"] },
+    { label: "👥 Social Pods", path: "/pods", desc: "Mutual accountability groups", keywords: ["pods", "social", "friends", "group", "accountability", "invite"] }
+];
+
 export default function Navbar() {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -26,6 +35,7 @@ export default function Navbar() {
     const [searchQuery, setSearchQuery] = useState("");
     const [tasks, setTasks] = useState([]);
     const [filteredTasks, setFilteredTasks] = useState([]);
+    const [filteredShortcuts, setFilteredShortcuts] = useState([]);
 
     // Real Notifications List
     const [notifications, setNotifications] = useState([]);
@@ -88,13 +98,23 @@ export default function Navbar() {
     useEffect(() => {
         if (!searchQuery.trim()) {
             setFilteredTasks([]);
+            setFilteredShortcuts([]);
             return;
         }
+        const query = searchQuery.toLowerCase();
+        
         const matches = tasks.filter(t => 
-            t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.priority.toLowerCase().includes(searchQuery.toLowerCase())
+            (t.title || "").toLowerCase().includes(query) ||
+            (t.priority || "").toLowerCase().includes(query)
         );
         setFilteredTasks(matches);
+
+        const shortcutMatches = SHORTCUTS.filter(s =>
+            s.label.toLowerCase().includes(query) ||
+            s.desc.toLowerCase().includes(query) ||
+            s.keywords.some(k => k.toLowerCase().includes(query))
+        );
+        setFilteredShortcuts(shortcutMatches);
     }, [searchQuery, tasks]);
 
     // Close Dropdowns on Click Outside
@@ -451,53 +471,73 @@ export default function Navbar() {
                         </div>
 
                         {/* Search Results list */}
-                        <div className="max-h-80 overflow-y-auto p-3.5 space-y-3">
+                        <div className="max-h-80 overflow-y-auto p-3.5 space-y-4">
                             {searchQuery.trim() === "" ? (
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-1">Quick Shortcuts</p>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { label: "⚡ Focus Session Timer", path: "/focus", desc: "Start Pomodoro clock" },
-                                            { label: "📊 Analytics Dashboard", path: "/analytics", desc: "View focus diagnostics" },
-                                            { label: "🗓️ Study baseline schedule", path: "/schedule", desc: "View baseline schedule" },
-                                            { label: "⚙️ User settings", path: "/settings", desc: "Manage timezone & display" }
-                                        ].map((link, idx) => (
+                                        {SHORTCUTS.slice(0, 4).map((link, idx) => (
                                             <div
                                                 key={idx}
                                                 onClick={() => { setShowSearchPalette(false); navigate(link.path); }}
                                                 className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 bg-slate-50 dark:bg-slate-900/40 hover:bg-sky-500/5 text-left cursor-pointer transition-all duration-200"
                                             >
-                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-250">{link.label}</p>
-                                                <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">{link.desc}</p>
+                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-255">{link.label}</p>
+                                                <p className="text-[9px] text-slate-500 dark:text-slate-450 mt-0.5">{link.desc}</p>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            ) : filteredTasks.length === 0 ? (
-                                <p className="text-center text-xs text-slate-500 py-4">No matching tasks found</p>
+                            ) : filteredTasks.length === 0 && filteredShortcuts.length === 0 ? (
+                                <p className="text-center text-xs text-slate-500 py-4">No matching tasks or pages found</p>
                             ) : (
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-1">Matching Tasks ({filteredTasks.length})</p>
-                                    <div className="space-y-1.5">
-                                        {filteredTasks.map(t => (
-                                            <div
-                                                key={t._id}
-                                                onClick={() => { setShowSearchPalette(false); navigate("/tasks"); }}
-                                                className="flex justify-between items-center p-3 rounded-xl border border-slate-200 dark:border-slate-800/60 hover:border-sky-500/40 bg-slate-50 dark:bg-slate-900/40 hover:bg-sky-500/5 cursor-pointer transition-all duration-200"
-                                            >
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{t.title}</p>
-                                                    {t.subject && <p className="text-[9px] text-slate-500 dark:text-slate-450 mt-0.5">📂 {t.subject}</p>}
-                                                </div>
-                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                                                    t.priority === 'High' ? 'bg-red-500/15 text-red-400' :
-                                                    t.priority === 'Medium' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'
-                                                }`}>
-                                                    {t.priority}
-                                                </span>
+                                <div className="space-y-4">
+                                    {/* Matching Shortcuts/Pages Section */}
+                                    {filteredShortcuts.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-1">Matching Pages ({filteredShortcuts.length})</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {filteredShortcuts.map((link, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => { setShowSearchPalette(false); navigate(link.path); }}
+                                                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 bg-slate-50 dark:bg-slate-900/40 hover:bg-sky-500/5 text-left cursor-pointer transition-all duration-200"
+                                                    >
+                                                        <p className="text-xs font-bold text-slate-800 dark:text-slate-255">{link.label}</p>
+                                                        <p className="text-[9px] text-slate-500 dark:text-slate-450 mt-0.5">{link.desc}</p>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    )}
+
+                                    {/* Matching Tasks Section */}
+                                    {filteredTasks.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-1">Matching Tasks ({filteredTasks.length})</p>
+                                            <div className="space-y-1.5">
+                                                {filteredTasks.map(t => (
+                                                    <div
+                                                        key={t._id}
+                                                        onClick={() => { setShowSearchPalette(false); navigate("/tasks"); }}
+                                                        className="flex justify-between items-center p-3 rounded-xl border border-slate-200 dark:border-slate-800/60 hover:border-sky-500/40 bg-slate-50 dark:bg-slate-900/40 hover:bg-sky-500/5 cursor-pointer transition-all duration-200"
+                                                    >
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{t.title}</p>
+                                                            {t.description && <p className="text-[9px] text-slate-500 dark:text-slate-450 mt-0.5 truncate max-w-xs">{t.description}</p>}
+                                                        </div>
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                                            t.priority === 'Critical' ? 'bg-purple-500/15 text-purple-400' :
+                                                            t.priority === 'High' ? 'bg-red-500/15 text-red-400' :
+                                                            t.priority === 'Medium' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'
+                                                        }`}>
+                                                            {t.priority}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

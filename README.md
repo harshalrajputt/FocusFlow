@@ -1,12 +1,12 @@
 # FocusFlow 🎯 — Intelligent Study Schedule & Focus Telemetry System
 
-FocusFlow is a comprehensive, machine-learning-driven study planner and behavioral tracking system. Unlike generic blockers or manual timers, FocusFlow bridges the gap between schedule planning and actual behavioral enforcement through a Chrome Extension telemetry layer, a responsive React web dashboard, and a scikit-learn random forest predictive model.
+FocusFlow is a comprehensive, machine-learning-driven study planner, behavioral tracking system, and social accountability platform. Unlike generic blockers or manual timers, FocusFlow bridges the gap between schedule planning and actual behavioral enforcement through a Chrome Extension telemetry layer, a responsive React web dashboard, a scikit-learn random forest predictive model, and peer-to-peer social accountability pods.
 
 ---
 
 ## 🏗️ System Architecture
 
-FocusFlow consists of four core components working in unison to track, analyze, and enforce productivity:
+FocusFlow consists of five core components working in unison to track, analyze, and enforce productivity:
 
 ```mermaid
 flowchart TD
@@ -14,20 +14,28 @@ flowchart TD
         D[Dashboard & Analytics]
         S[Schedule Planner]
         O[Onboarding Wizard]
+        P[Social Pods Dashboard]
     end
 
     subgraph ChromeExt ["Chrome Extension Telemetry"]
         T[Active Domain Tracker]
         B[Tab Blocklist Enforcer]
-        P[Timer Controller]
+        PC[Timer Controller]
+        CFG[Dynamic Timer & Whitelist Config]
     end
 
     subgraph Backend ["Node.js + Express API Gateway"]
         M[Auth & Token Management]
-        SM[Schedule Engine]
+        SM[Schedule & Rearrangement Engine]
         TM[Telemetry Processor]
-        NM[Notification Checker]
+        NM[Notification & Nudge Dispatcher]
+        PM[Social Pods Coordinator]
         DB[(MongoDB Database)]
+    end
+
+    subgraph External ["Services"]
+        SMTP[Brevo SMTP OTP Mailer]
+        CLD[Cloudinary Image CDN]
     end
 
     subgraph ML ["FastAPI ML Microservice"]
@@ -41,6 +49,8 @@ flowchart TD
     Client -- Renders graphs & configuration --> Backend
     Backend -- Checks missed schedules & notifications --> DB
     Backend -- Queries predictions & advice tips --> ML
+    Backend -- Uploads base64 avatars --> CLD
+    Backend -- Dispatches OTP mails --> SMTP
     ML -- Trains models & returns outputs --> Backend
 ```
 
@@ -55,8 +65,10 @@ Most productivity tools only track time or act as static blocker extensions. Foc
 | **Telemetry Tracking** | Tracks time without target goals | Blocks sites without analyzing habits | Tracks domains and aligns them directly to scheduled study slots |
 | **Personalization** | Generic charts | Strict block lists | Generates custom baseline schedules matching class & sleep patterns |
 | **Machine Learning** | ❌ None | ❌ None | ✅ Predicts completion probability and burnout risk using Random Forest models |
+| **Adaptive Recovery** | ❌ None | ❌ None | ✅ Automatically reschedules missed critical blocks around lifestyle hours |
+| **Social Pods** | ❌ None | ❌ None | ✅ Mutual accountability loops with streaks, collective quests, and nudges |
+| **Cloudinary Integration**| ❌ None | ❌ None | ✅ Lightweight base64 to CDN profile picture pipelines |
 | **Enforcement** | ❌ None | ✅ Simple URL redirect | ✅ Automatically redirects distraction domains *only* during active sessions |
-| **Dynamic Coaching** | ❌ None | ❌ None | ✅ Generates real-time study slot suggestions and tips based on weekly browse history |
 
 ---
 
@@ -76,23 +88,23 @@ FocusFlow/
 │   │   │   ├── Analytics.jsx   # ML Predictive values, heatmaps, AI Coach
 │   │   │   ├── Schedule.jsx    # Weekly timetable timeline & tabs
 │   │   │   ├── Onboarding.jsx  # Student academic onboarding wizard
-│   │   │   └── Settings.jsx    # Appearance theme, timezone settings, extension downloader
+│   │   │   ├── Pods.jsx        # Group leaderboards, feeds, quests, nudges
+│   │   │   └── Settings.jsx    # Appearance theme, custom details, profile pictures
 │   │   └── services/           # Axios API Client service layers
 ├── server/                     # Express.js REST API backend
 │   ├── config/                 # DB connections
 │   ├── controllers/            # Logic for auth, profile, schedules, and usage
 │   ├── middleware/             # Express JWT protect routers
 │   ├── models/                 # Mongoose database models:
-│   │   │                       # (User, UserProfile, Schedule, FocusSession,
-│   │   │                       # Notification, WebsiteUsage, WeeklyWebsiteUsage, MonthlyWebsiteUsage)
+│   │   │                       # (User, UserProfile, Schedule, FocusSession, Task,
+│   │   │                       # Notification, WebsiteUsage, Pod, PodInvite, PodActivity)
 │   │   └── routes/             # Routed Express API endpoints
 ├── ml-service/                 # Python FastAPI + scikit-learn microservice
 │   ├── main.py                 # FastAPI endpoints & Random Forest classifier/regressor
-│   └── notebooks/              # For exploratory analysis & prototyping
 └── extension/                  # Manifest V3 Chrome Extension
     ├── manifest.json           # Declarations (idle, tabs, alarms, storage)
-    ├── background.js           # Domain usage accumulator, idle monitor, enforcer
-    ├── popup.html/js           # Extension login and session controller popup
+    ├── background.js           # Domain usage accumulator, whitelist filter, enforcer
+    ├── popup.html/js           # Extension login, dynamic timer and whitelist configurator
     └── block.html              # Custom redirection page when visiting blocklists
 ```
 
@@ -102,11 +114,33 @@ FocusFlow/
 
 ### Prerequisites
 * **Node.js** (v18+)
-* **MongoDB** (Running locally on `mongodb://localhost:27017/focusflow`)
+* **MongoDB** (Running locally on `mongodb://127.0.0.1:27017/focusflow`)
 * **Python** (3.8+ with virtualenv)
+* **Cloudinary Account** (for profile picture hosting)
+* **Brevo Account** (for SMTP OTP mailing services)
 * **Google Chrome** browser
 
-### Step 1: Start the Backend server
+### Step 1: Configure Backend Environment
+Create a `.env` file in the `server` directory and add your credentials:
+```env
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/focusflow
+JWT_SECRET=your_jwt_secret_key
+
+# SMTP Configuration
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your_brevo_username
+SMTP_PASS=your_brevo_smtp_password
+EMAIL_FROM="FocusFlow <your_verified_sender_email>"
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+```
+
+### Step 2: Start the Backend server
 ```bash
 cd server
 npm install
@@ -114,7 +148,7 @@ npm run dev
 ```
 *App is configured to run at `http://localhost:5000`.*
 
-### Step 2: Start the FastAPI ML Service
+### Step 3: Start the FastAPI ML Service
 ```bash
 cd ml-service
 python -m venv venv
@@ -124,49 +158,41 @@ python main.py
 ```
 *Inferences are served at `http://localhost:8000`.*
 
-### Step 3: Start the Client Web App
+### Step 4: Start the Client Web App
 ```bash
 cd client
 npm install
 npm run dev
 ```
-*Frontend runs at `http://localhost:5173` (or `5174`).*
+*Frontend runs at `http://localhost:5173`.*
 
-### Step 4: Install the Chrome Extension
+### Step 5: Install the Chrome Extension
 1. Open Google Chrome and go to `chrome://extensions/`.
 2. Turn on **Developer mode** (top right toggle).
-3. Click **Load unpacked** (top left button).
-4. Select the `extension/` folder inside this repository.
+3. Click **Load unpacked** (top left button) and select the `extension/` folder in this repo, or download it directly from the web app's header.
 
 ---
 
 ## 🛠️ Key Features Walkthrough
 
-### 1. 5-Step Student Onboarding & Calendar Generator
-Upon registration, users configure their student profile (Academic level, Sleep window, Class/lecture times, and Commute buffers). The server calculates a baseline week-1 schedule dynamically, inserting rest periods and study blocks matched to their goals and peak focus periods.
+### 1. 5-Step Academic Onboarding & Baseline Scheduler
+Upon registration, users configure their academic profiles (Study style, class schedules, target study hours). The server calculates a baseline week-1 schedule dynamically, arranging study blocks around class timings, sleep schedules, and travel buffers.
 
-### 2. Chrome Extension Telemetry & Synced Blocker
-The extension hooks into Chrome tab switches and system idle listeners to log active browser time. 
-* Visited domains are batched and synced to the backend every 30 seconds.
-* Categorization is determined on the server:
-  * **Productive:** Coding platforms, local development (`localhost`), documentation sites, and MOOCs.
-  * **Distracting:** Social media, stream platforms, and gaming portals.
-  * **Neutral:** Emails, Notion, and Google Drive.
-* If a focus session starts on the web dashboard, the extension automatically redirects distractors to a custom `block.html` page and counts interruptions.
+### 2. Chrome Extension with Custom Whitelists & Timers
+The extension tracks active browser domain timings and syncs logs to the backend. It includes:
+* **Custom Timers**: Set Focus, Short Break, and Long Break times directly in the extension.
+* **Custom Whitelist/Blocklist**: Configure which domains to block during active study sessions, and whitelists (like `google.com`) that should never be blocked.
 
-### 3. Multi-Granularity Spends & ML Coach
-Your web activity is saved on daily, weekly, and monthly levels. The FastAPI service analyzes these spends:
-* Adjusts completion probability and burnout risks based on distraction rates.
-* Generates actionable suggestions in the recommendations panel (e.g. suggesting shifting slots, shortening durations, or locking down blocklists).
+### 3. Adaptive Recovery Engine & Protected Lifestyle Blocks
+If you miss a scheduled session:
+* The system displays a non-judgmental **Missed Session Modal** asking for task importance.
+* Marking it **Critical** runs the **Rearrangement Engine**, which automatically reschedules the study block into your upcoming free hours while strictly protecting your sleep and predefined lifestyle blocks (e.g. Gym, gaming).
 
-### 4. Dynamic Notification Center
-Whenever a scheduled study block ends, the system checks whether you started a matching focus timer. If you missed the slot, it posts an alert (`⚠️ Missed Session`) directly in the Navbar notifications dropdown. It also appends daily productivity tips (`💡 AI Focus Flow Recommendation`) generated by the ML model.
+### 4. Social Pods (Accountability Groups)
+Connect with up to 4 friends to study together:
+* **Group Streaks**: Maintain daily streaks by having all members complete at least one focus session.
+* **Quests/Challenges**: Work together on collaborative goals (e.g., target 200 XP).
+* **Nudges**: Poke (👉), Clap (👏), or Encourage (💪) friends to keep them motivated.
 
----
-
-## 🔮 Future Scope
-
-* **Federated Learning:** Refactor model updates to train predictions locally on the user's browser extension sandbox, maximizing browser history privacy.
-* **Integrations:** Add bi-directional syncs for Google Calendar, Outlook, and Apple Calendar events.
-* **Gamification & Study Rooms:** Peer-to-peer visual dashboards and group study rooms utilizing socket.io to encourage accountability.
-* **Cross-Browser Support:** Target Firefox (WebExtensions API) and Safari (App Extensions) for native cross-device tracking.
+### 5. Multi-level Aggregation & ML analytics
+Visualizes website activity on daily, weekly, and monthly levels. The FastAPI service analyzes these metrics to output **burnout risks**, **completion probabilities**, and **AI coach tips**.
