@@ -173,6 +173,7 @@ const updateUserProfile = async (req, res) => {
         }
 
         const { name, username, email, timezone, settings, profilePicture } = req.body;
+        console.log("[updateUserProfile] req.body received:", req.body);
 
         if (name !== undefined) user.name = name.trim();
         if (username !== undefined) {
