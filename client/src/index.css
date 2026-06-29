@@ -1,43 +1,73 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-/* ===== COLOR DESIGN SYSTEM (RescueTime / Clockify aesthetic) ===== */
+/* =====================================================================
+   🎨 FOCUSFLOW — GOD-LEVEL DUAL THEME DESIGN SYSTEM
+   Premium design tokens for both Light & Dark themes.
+   Every surface, text, border, and glow is fully theme-aware.
+   ===================================================================== */
+
+/* ── LIGHT THEME (Default) ── */
 :root {
-  /* LIGHT THEME (Default) */
-  --bg-primary: #f3f4f6;       /* Clean light gray */
-  --bg-secondary: #ffffff;     /* White card background */
-  --bg-tertiary: #e5e7eb;      /* Panel border grey */
-  --border-color: rgba(100, 116, 139, 0.12);
-  --border-hover: rgba(100, 116, 139, 0.2);
-  --text-primary: #0f172a;     /* Dark charcoal */
-  --text-secondary: #334155;   /* Slate blue secondary */
-  --text-muted: #64748b;       /* Muted gray */
-  --accent-color: #0284c7;     /* Clockify Sky Blue */
-  --accent-glow: rgba(2, 132, 199, 0.08);
-  --accent-gradient: linear-gradient(135deg, #0284c7, #0d9488); /* Blue to Teal */
+  --bg-primary: #f1f5f9;          /* Cool slate canvas */
+  --bg-secondary: #ffffff;        /* White card surfaces */
+  --bg-tertiary: #e2e8f0;         /* Elevated panels / dividers */
+  --bg-inset: #f8fafc;            /* Inset fields & wells */
+  
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-hover: rgba(15, 23, 42, 0.16);
+  --border-strong: rgba(15, 23, 42, 0.12);
+  
+  --text-primary: #0f172a;        /* Headings — near-black */
+  --text-secondary: #334155;      /* Body text — dark slate */
+  --text-muted: #64748b;          /* Captions — mid-grey */
+  --text-faint: #94a3b8;          /* Placeholders — light grey */
+  
+  --accent-color: #0284c7;        /* Sky Blue primary */
+  --accent-glow: rgba(2, 132, 199, 0.10);
+  --accent-gradient: linear-gradient(135deg, #0284c7, #0d9488);
   --accent-hover: #0369a1;
   --accent-light: #e0f2fe;
   
-  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
   
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(100, 116, 139, 0.08);
-  --glow-color: rgba(2, 132, 199, 0.02);
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(15, 23, 42, 0.06);
+  --glow-color: rgba(2, 132, 199, 0.03);
+  
+  --dropdown-bg: #ffffff;
+  --dropdown-hover: #f1f5f9;
+  --dropdown-border: rgba(15, 23, 42, 0.06);
+  
+  --code-bg: #f1f5f9;
+  --code-text: #0284c7;
+  
+  --shimmer-color: rgba(0, 0, 0, 0.03);
+  --sweep-color: rgba(0, 0, 0, 0.02);
+  --noise-opacity: 0.012;
+  --selection-bg: rgba(2, 132, 199, 0.18);
 }
 
+/* ── DARK THEME ── */
 body.dark-theme {
-  /* DARK THEME */
-  --bg-primary: #0b111e;       /* Deep charcoal-navy */
-  --bg-secondary: #121826;     /* Slate card background */
-  --bg-tertiary: #1b2234;      /* Panel border grey */
+  --bg-primary: #0b111e;          /* Deep charcoal-navy */
+  --bg-secondary: #121826;        /* Slate card surfaces */
+  --bg-tertiary: #1b2234;         /* Elevated panels */
+  --bg-inset: #0d1424;            /* Inset fields & wells */
+  
   --border-color: rgba(255, 255, 255, 0.07);
   --border-hover: rgba(255, 255, 255, 0.14);
-  --text-primary: #f1f5f9;     /* Light slate */
-  --text-secondary: #94a3b8;   /* Slate grey */
-  --text-muted: #64748b;       /* Dark grey */
-  --accent-color: #38bdf8;     /* Light Sky Blue */
+  --border-strong: rgba(255, 255, 255, 0.10);
+  
+  --text-primary: #f1f5f9;        /* Headings — near-white */
+  --text-secondary: #94a3b8;      /* Body text — soft slate */
+  --text-muted: #64748b;          /* Captions — muted */
+  --text-faint: #475569;          /* Placeholders — subtle */
+  
+  --accent-color: #38bdf8;        /* Light Sky Blue */
   --accent-glow: rgba(56, 189, 248, 0.12);
   --accent-gradient: linear-gradient(135deg, #0284c7, #0d9488);
   --accent-hover: #7dd3fc;
@@ -46,13 +76,29 @@ body.dark-theme {
   --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.4);
   
-  --glass-bg: rgba(18, 24, 38, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-bg: rgba(18, 24, 38, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.06);
   --glow-color: rgba(56, 189, 248, 0.02);
+  
+  --dropdown-bg: #141c2e;
+  --dropdown-hover: #1b2234;
+  --dropdown-border: rgba(255, 255, 255, 0.07);
+  
+  --code-bg: rgba(56, 189, 248, 0.08);
+  --code-text: #38bdf8;
+  
+  --shimmer-color: rgba(255, 255, 255, 0.04);
+  --sweep-color: rgba(255, 255, 255, 0.03);
+  --noise-opacity: 0.015;
+  --selection-bg: rgba(56, 189, 248, 0.25);
 }
 
-/* ===== BASE OVERRIDES ===== */
+
+/* =====================================================================
+   📐 BASE RESETS & TYPOGRAPHY
+   ===================================================================== */
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
@@ -69,7 +115,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.35s cubic-bezier(.4,0,.2,1), color 0.35s cubic-bezier(.4,0,.2,1);
 }
 
 #root {
@@ -80,59 +126,280 @@ body {
   text-align: left;
 }
 
-/* ===== COMPATIBILITY THEME ADAPTATION OVERRIDES ===== */
-body.light-theme h1,
-body.light-theme h2,
-body.light-theme h3,
-body.light-theme h4,
+
+/* =====================================================================
+   🌗 COMPREHENSIVE LIGHT-THEME OVERRIDES
+   Maps every hardcoded Tailwind dark-mode class to proper light values.
+   This section guarantees perfect readability in light mode.
+   ===================================================================== */
+
+/* ── TEXT COLORS ── */
+/* Headings: slate-100, slate-200, slate-255 → dark text */
 body.light-theme .text-slate-100,
-body.light-theme .text-slate-200 {
+body.light-theme .text-slate-200,
+body.light-theme .text-slate-255 {
   color: var(--text-primary) !important;
 }
 
-body.light-theme p,
-body.light-theme span:not(.text-violet-400):not(.text-emerald-400):not(.text-emerald-300):not(.text-amber-400):not(.text-rose-400):not(.text-indigo-400):not(.text-indigo-300):not(.text-violet-300):not(.text-slate-500):not(.text-slate-600):not(.text-sky-500):not(.text-emerald-500):not(.text-rose-500),
-body.light-theme .text-slate-350,
+/* Body text: slate-300, slate-350, slate-400 → secondary text */
 body.light-theme .text-slate-300,
+body.light-theme .text-slate-350,
 body.light-theme .text-slate-400 {
   color: var(--text-secondary) !important;
 }
 
-body.light-theme .text-slate-500,
-body.light-theme .text-slate-600 {
+/* Muted: slate-450, slate-500 → muted text */
+body.light-theme .text-slate-450,
+body.light-theme .text-slate-500 {
   color: var(--text-muted) !important;
 }
 
+/* Faint: slate-550, slate-600 → faint text */
+body.light-theme .text-slate-550,
+body.light-theme .text-slate-600 {
+  color: var(--text-faint) !important;
+}
+
+/* Headings (semantic) → always use primary text */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme h5,
+body.light-theme h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Paragraphs with light-on-dark text classes → make readable on white */
+body.light-theme p.text-slate-100,
+body.light-theme p.text-slate-200 {
+  color: var(--text-primary) !important;
+}
+body.light-theme p.text-slate-300,
+body.light-theme p.text-slate-350,
+body.light-theme p.text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+body.light-theme p.text-slate-450,
+body.light-theme p.text-slate-500 {
+  color: var(--text-muted) !important;
+}
+body.light-theme p.text-slate-550,
+body.light-theme p.text-slate-600 {
+  color: var(--text-faint) !important;
+}
+
+/* Spans with explicit light-on-dark classes → secondary */
+body.light-theme span.text-slate-100,
+body.light-theme span.text-slate-200,
+body.light-theme span.text-slate-255 {
+  color: var(--text-primary) !important;
+}
+body.light-theme span.text-slate-300,
+body.light-theme span.text-slate-350,
+body.light-theme span.text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+/* IMPORTANT: preserve Tailwind-branded text colors in BOTH themes */
+body.light-theme .text-sky-400 { color: #0284c7 !important; }
+body.light-theme .text-sky-500 { color: #0284c7 !important; }
+body.light-theme .text-sky-600 { color: #0369a1 !important; }
+body.light-theme .text-emerald-400 { color: #059669 !important; }
+body.light-theme .text-emerald-300 { color: #059669 !important; }
+body.light-theme .text-teal-400 { color: #0d9488 !important; }
+body.light-theme .text-amber-400 { color: #d97706 !important; }
+body.light-theme .text-rose-400 { color: #e11d48 !important; }
+body.light-theme .text-rose-500 { color: #e11d48 !important; }
+body.light-theme .text-violet-400 { color: #7c3aed !important; }
+body.light-theme .text-violet-300 { color: #7c3aed !important; }
+body.light-theme .text-indigo-400 { color: #4f46e5 !important; }
+body.light-theme .text-indigo-300 { color: #4f46e5 !important; }
+body.light-theme .text-purple-400 { color: #7c3aed !important; }
+body.light-theme .text-red-400 { color: #dc2626 !important; }
+
+/* ── BACKGROUND COLORS ── */
 body.light-theme .bg-slate-900,
+body.light-theme .bg-slate-950,
 body.light-theme .bg-\[\#0d1526\],
 body.light-theme .bg-\[\#0a1628\],
 body.light-theme .bg-\[\#020817\],
-body.light-theme .bg-slate-950\/80 {
+body.light-theme .bg-\[\#070d19\] {
   background-color: var(--bg-secondary) !important;
 }
 
-body.light-theme .border-slate-800,
-body.light-theme .border-slate-900,
-body.light-theme .border-slate-850,
-body.light-theme .border-slate-950,
+body.light-theme .bg-slate-800 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* Dropdown & panel tinted backgrounds */
+body.light-theme .bg-slate-900\/40,
+body.light-theme .bg-slate-950\/80 {
+  background-color: var(--bg-inset) !important;
+}
+
+body.light-theme .bg-slate-50 {
+  background-color: var(--bg-inset) !important;
+}
+
+body.light-theme .bg-slate-100 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+body.light-theme .bg-slate-100\/50 {
+  background-color: var(--bg-inset) !important;
+}
+
+/* ── BORDER COLORS ── */
+body.light-theme .border-slate-100,
+body.light-theme .border-slate-200,
 body.light-theme .border-slate-200\/80,
-body.light-theme .border-slate-800\/60 {
+body.light-theme .border-slate-800,
+body.light-theme .border-slate-800\/60,
+body.light-theme .border-slate-900,
+body.light-theme .border-slate-950 {
   border-color: var(--border-color) !important;
 }
 
-/* ===== PREMIUM SCROLLBAR ===== */
+/* ── DIVIDE COLORS ── */
+body.light-theme .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+body.light-theme .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-color) !important;
+}
+
+/* ── HOVER STATES ── */
+body.light-theme .hover\:bg-slate-100:hover,
+body.light-theme .hover\:bg-slate-200:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+body.light-theme .hover\:bg-slate-800:hover,
+body.light-theme .hover\:bg-slate-800\/20:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+body.light-theme .hover\:bg-slate-300:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+body.light-theme .hover\:text-slate-200:hover,
+body.light-theme .hover\:text-slate-300:hover {
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .hover\:text-slate-700:hover {
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .hover\:border-sky-500\/40:hover {
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+/* ── CODE ELEMENTS ── */
+body.light-theme code {
+  background: var(--code-bg) !important;
+  color: var(--code-text) !important;
+}
+
+body.light-theme .text-sky-400.font-mono,
+body.light-theme code.text-sky-600,
+body.light-theme code.text-sky-400 {
+  color: var(--code-text) !important;
+}
+
+/* ── KBD ELEMENTS ── */
+body.light-theme kbd {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── DARK THEME CLASS NEUTRALIZATION ── 
+   Tailwind v4 dark: prefix classes are processed differently.
+   We neutralize them so they don't bleed into light mode. */
+body.light-theme .dark\:text-slate-100,
+body.light-theme .dark\:text-slate-200,
+body.light-theme .dark\:text-slate-250,
+body.light-theme .dark\:text-slate-255 {
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .dark\:text-slate-300,
+body.light-theme .dark\:text-slate-350,
+body.light-theme .dark\:text-slate-400,
+body.light-theme .dark\:text-slate-450 {
+  color: var(--text-secondary) !important;
+}
+
+body.light-theme .dark\:text-slate-500,
+body.light-theme .dark\:text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+body.light-theme .dark\:text-sky-400 { color: #0284c7 !important; }
+body.light-theme .dark\:text-emerald-400 { color: #059669 !important; }
+body.light-theme .dark\:text-teal-400 { color: #0d9488 !important; }
+
+body.light-theme .dark\:bg-slate-800 {
+  background-color: var(--bg-tertiary) !important;
+}
+body.light-theme .dark\:bg-slate-900 {
+  background-color: var(--bg-secondary) !important;
+}
+body.light-theme .dark\:bg-slate-900\/40 {
+  background-color: var(--bg-inset) !important;
+}
+
+body.light-theme .dark\:border-slate-800,
+body.light-theme .dark\:border-slate-900 {
+  border-color: var(--border-color) !important;
+}
+
+body.light-theme .dark\:hover\:bg-slate-800:hover,
+body.light-theme .dark\:hover\:bg-slate-800\/20:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+body.light-theme .dark\:hover\:text-slate-200:hover,
+body.light-theme .dark\:hover\:text-slate-300:hover {
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .dark\:hover\:text-slate-350:hover {
+  color: var(--text-secondary) !important;
+}
+
+body.light-theme .dark\:bg-sky-400 { background-color: #0284c7 !important; }
+
+body.light-theme .dark\:divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-color) !important;
+}
+
+/* ── COMMAND PALETTE / MODAL OVERLAY ── */
+body.light-theme .bg-slate-950\/80 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+
+/* =====================================================================
+   📜 PREMIUM SCROLLBAR
+   ===================================================================== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { 
-  background: var(--border-color); 
+  background: var(--border-strong); 
   border-radius: 99px;
   transition: background 0.3s;
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-* { scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 
-/* ===== COMPACT SIDEBAR LAYOUT ===== */
-body.compact-sidebar aside {
+
+/* =====================================================================
+   🗂️ LAYOUT MODES
+   ===================================================================== */
+
+/* ── COMPACT SIDEBAR ── */
+body.compact-sidebar aside:not(.motion-aside) {
   width: 72px !important;
 }
 body.compact-sidebar aside span:not(.text-lg):not(.text-violet-400) {
@@ -159,7 +426,7 @@ body.compact-sidebar aside button span {
   display: none !important;
 }
 
-/* ===== DENSE LAYOUT ===== */
+/* ── DENSE LAYOUT ── */
 body.dense-layout {
   font-size: 13px !important;
 }
@@ -179,7 +446,7 @@ body.dense-layout .gap-4 {
   gap: 8px !important;
 }
 
-/* ===== REDUCE MOTION ===== */
+/* ── REDUCE MOTION ── */
 body.reduce-motion *,
 body.reduce-motion *::before,
 body.reduce-motion *::after {
@@ -189,9 +456,10 @@ body.reduce-motion *::after {
   scroll-behavior: auto !important;
 }
 
-/* ====================================================================
+
+/* =====================================================================
    ✨ GOD-LEVEL ANIMATIONS & MICRO-INTERACTIONS
-   ==================================================================== */
+   ===================================================================== */
 
 /* Core Keyframes */
 @keyframes fadeInUp {
@@ -213,11 +481,11 @@ body.reduce-motion *::after {
 }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+  0% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(52, 211, 153, 0.4)); }
+  100% { box-shadow: 0 0 0 6px transparent; }
 }
 
-/* Premium new keyframes */
+/* Premium keyframes */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -251,6 +519,10 @@ body.reduce-motion *::after {
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+@keyframes subtleRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* Animation Utilities */
 .animate-fade-in-up   { animation: fadeInUp 0.5s cubic-bezier(.22,1,.36,1) both; }
@@ -263,6 +535,10 @@ body.reduce-motion *::after {
 .animate-breathe      { animation: breathe 4s ease-in-out infinite; }
 .animate-slide-in-right  { animation: slideInRight 0.4s cubic-bezier(.25,.8,0.25,1) both; }
 .animate-slide-out-right { animation: slideOutRight 0.4s cubic-bezier(.25,.8,0.25,1) both; }
+.animate-subtle-rise  { animation: subtleRise 0.3s ease both; }
+.animate-shimmer      { background-size: 200% 100%; animation: shimmer 1.5s infinite linear; }
+.animate-glow-pulse   { animation: glowPulse 2s ease-in-out infinite; }
+.animate-border-glow  { animation: borderGlow 2s ease-in-out infinite; }
 
 .delay-1 { animation-delay: 0.06s; }
 .delay-2 { animation-delay: 0.12s; }
@@ -270,9 +546,11 @@ body.reduce-motion *::after {
 .delay-4 { animation-delay: 0.24s; }
 .delay-5 { animation-delay: 0.30s; }
 
-/* ====================================================================
+
+
+/* =====================================================================
    🎨 PREMIUM COMPONENT STYLES 
-   ==================================================================== */
+   ===================================================================== */
 
 /* Sidebar Link Hover Shimmer */
 aside nav a {
@@ -286,7 +564,7 @@ aside nav a::after {
   left: -100%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  background: linear-gradient(90deg, transparent, var(--shimmer-color), transparent);
   transition: left 0.5s ease;
   pointer-events: none;
 }
@@ -336,7 +614,7 @@ button::before {
   left: -100%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  background: linear-gradient(90deg, transparent, var(--sweep-color), transparent);
   transition: left 0.6s ease;
   pointer-events: none;
 }
@@ -398,24 +676,26 @@ input:focus, select:focus, textarea:focus {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ====================================================================
+
+/* =====================================================================
    🌊 AMBIENT BACKGROUND NOISE TEXTURE (subtle)
-   ==================================================================== */
+   ===================================================================== */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.015;
+  opacity: var(--noise-opacity);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
 }
 
-/* ====================================================================
+
+/* =====================================================================
    ✅ AUTOFILL OVERRIDE
-   ==================================================================== */
+   ===================================================================== */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
@@ -426,14 +706,68 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* ====================================================================
+
+/* =====================================================================
    🎭 SELECTION COLOR
-   ==================================================================== */
+   ===================================================================== */
 ::selection {
-  background: rgba(56, 189, 248, 0.25);
+  background: var(--selection-bg);
   color: var(--text-primary);
 }
 ::-moz-selection {
-  background: rgba(56, 189, 248, 0.25);
+  background: var(--selection-bg);
   color: var(--text-primary);
+}
+
+
+/* =====================================================================
+   🎪 SELECT / OPTION DROPDOWN THEMING
+   Native <option> elements inside <select> need explicit colors.
+   ===================================================================== */
+select {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-primary) !important;
+}
+option {
+  background-color: var(--dropdown-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+
+/* =====================================================================
+   🔲 LIGHT-THEME SPECIFIC POLISH
+   Extra refinements that only apply to light mode for premium quality.
+   ===================================================================== */
+
+/* Softer card shadow in light mode */
+body.light-theme .rounded-2xl {
+  box-shadow: var(--shadow-sm);
+}
+body.light-theme .rounded-2xl:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Light mode: star rating visibility */
+body.light-theme button .text-2xl,
+body.light-theme .text-2xl {
+  color: var(--text-primary);
+}
+
+/* Ensure placeholder text is visible */
+body.light-theme ::placeholder {
+  color: var(--text-faint) !important;
+  opacity: 1 !important;
+}
+body.dark-theme ::placeholder {
+  color: var(--text-faint) !important;
+  opacity: 1 !important;
+}
+
+/* =====================================================================
+   🔲 DARK-THEME SPECIFIC POLISH
+   ===================================================================== */
+
+/* Ensure dark mode auth left panel stays dark */
+body.dark-theme .bg-\[\#070d19\] {
+  background-color: #070d19 !important;
 }

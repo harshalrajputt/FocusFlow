@@ -1,6 +1,7 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import FocusFlowIcon from "../../assets/FocusFlowIcon.png";
-
 
 const menuItems = [
     {
@@ -35,13 +36,23 @@ const menuItems = [
         name: "Settings", path: "/settings",
         icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     },
-
 ];
 
 export default function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    // Dynamic state synced with body class
+    const [isCompact, setIsCompact] = useState(() => document.body.classList.contains("compact-sidebar"));
+
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setIsCompact(document.body.classList.contains("compact-sidebar"));
+        });
+        observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+        return () => observer.disconnect();
+    }, []);
 
     const isItemActive = (item) => {
         const itemPath = item.path;
@@ -54,7 +65,6 @@ export default function Sidebar() {
         }
     };
 
-
     const initials = user?.name
         ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
         : "U";
@@ -66,13 +76,19 @@ export default function Sidebar() {
     };
 
     return (
-        <aside
-            className="w-64 flex-shrink-0 flex flex-col min-h-screen transition-all duration-300"
-            style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-color)' }}
+        <motion.aside
+            animate={{ width: isCompact ? 76 : 256 }}
+            transition={{ type: "spring", stiffness: 220, damping: 26 }}
+            className="motion-aside flex-shrink-0 flex flex-col min-h-screen relative overflow-hidden"
+            style={{ 
+                background: 'var(--bg-secondary)', 
+                borderRight: '1px solid var(--border-color)',
+                zIndex: 10
+            }}
         >
             {/* Brand */}
             <div className="flex items-center gap-3 px-5 py-5 group" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                     <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-sky-500/20 to-teal-500/20 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-500" />
                     <img 
                         src={FocusFlowIcon} 
@@ -80,15 +96,37 @@ export default function Sidebar() {
                         className="relative w-9 h-9 object-contain flex-shrink-0 rounded-xl transition-transform duration-300 group-hover:scale-110"
                     />
                 </div>
-                <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100 brand-name">
-                    Focus<span className="text-sky-500 dark:text-sky-400">Flow</span>
-                </span>
+                <AnimatePresence initial={false}>
+                    {!isCompact && (
+                        <motion.span 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100 brand-name whitespace-nowrap overflow-hidden"
+                        >
+                            Focus<span className="text-sky-500 dark:text-sky-400">Flow</span>
+                        </motion.span>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-0.5">
-                <p className="px-3 mb-3 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600">Navigation</p>
-                {menuItems.map((item, idx) => {
+            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
+                <AnimatePresence initial={false}>
+                    {!isCompact && (
+                        <motion.p 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="px-3 mb-3 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 whitespace-nowrap overflow-hidden"
+                        >
+                            Navigation
+                        </motion.p>
+                    )}
+                </AnimatePresence>
+
+                {menuItems.map((item) => {
                     const active = isItemActive(item);
                     return (
                         <NavLink
@@ -111,11 +149,23 @@ export default function Sidebar() {
                                     style={{ background: 'var(--accent-gradient)' }}
                                 />
                             )}
-                            <span className={`transition-all duration-300 ${active ? 'text-sky-500 scale-110' : 'text-slate-500 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-300 group-hover:scale-110'}`}>
+                            <span className={`flex-shrink-0 transition-all duration-300 ${active ? 'text-sky-500 scale-110' : 'text-slate-500 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-300 group-hover:scale-110'}`}>
                                 {item.icon}
                             </span>
-                            <span>{item.name}</span>
-                            {active && (
+                            <AnimatePresence initial={false}>
+                                {!isCompact && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="whitespace-nowrap overflow-hidden"
+                                    >
+                                        {item.name}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                            {active && !isCompact && (
                                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400 animate-pulse-dot" />
                             )}
                         </NavLink>
@@ -124,10 +174,10 @@ export default function Sidebar() {
             </nav>
 
             {/* User + Logout */}
-            <div className="px-3 pb-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <div className="px-3 pb-4 flex-shrink-0" style={{ borderTop: '1px solid var(--border-color)' }}>
                 {/* User card */}
                 <div
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl mt-3 mb-1"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl mt-3 mb-1 overflow-hidden"
                     style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
                 >
                     <div
@@ -140,27 +190,51 @@ export default function Sidebar() {
                             initials
                         )}
                     </div>
-                    <div className="min-w-0">
-                        <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold truncate">{user?.name || "User"}</p>
-                        <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{user?.email || ""}</p>
-                    </div>
+                    <AnimatePresence initial={false}>
+                        {!isCompact && (
+                            <motion.div 
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: "auto" }}
+                                exit={{ opacity: 0, width: 0 }}
+                                className="min-w-0 flex-1 overflow-hidden"
+                            >
+                                <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold truncate">{user?.name || "User"}</p>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{user?.email || ""}</p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Logout */}
                 <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 transition-all duration-200 cursor-pointer"
+                    style={{ justifyContent: isCompact ? 'center' : 'flex-start' }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.background = ''; }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                    Logout
+                    <span className="flex-shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </span>
+                    <AnimatePresence initial={false}>
+                        {!isCompact && (
+                            <motion.span
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="whitespace-nowrap overflow-hidden"
+                            >
+                                Logout
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
                 </button>
             </div>
-        </aside>
+        </motion.aside>
     );
 }

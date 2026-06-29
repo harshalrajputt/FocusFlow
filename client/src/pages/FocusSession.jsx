@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { logFocusSession, getFocusSummary } from "../services/focusService";
 import { getTasks } from "../services/taskService";
+import Timer3DVisual from "../components/layout/Timer3DVisual";
 
 const MODES = [
     {
@@ -182,6 +183,7 @@ const FocusSession = () => {
     const [interruptions, setInterruptions] = useState(0);
     const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
     const [pendingSession, setPendingSession] = useState(null);
+    const [completed, setCompleted] = useState(false);
 
     const mode = MODES[modeIdx];
     const total = mode.duration * 60;
@@ -274,6 +276,8 @@ const FocusSession = () => {
         const end = new Date();
         const start = startTime || new Date(end.getTime() - durationSecs * 1000);
 
+        setCompleted(true);
+
         setPendingSession({
             sessionType: currentMode.label,
             duration: durationSecs,
@@ -303,6 +307,7 @@ const FocusSession = () => {
     };
 
     const logInterruptedSession = () => {
+        setCompleted(false);
         if (elapsed >= 10 && startTime && MODES[modeIdx].label === "Focus") {
             const currentMode = MODES[modeIdx];
             const end = new Date();
@@ -351,6 +356,9 @@ const FocusSession = () => {
     }, [running, modeIdx, startTime, selectedTaskId]);
 
     const handlePlayPause = () => {
+        if (!running) {
+            setCompleted(false);
+        }
         if (running) {
             setPauseCount(prev => prev + 1);
         }
@@ -358,6 +366,7 @@ const FocusSession = () => {
     };
 
     const switchMode = (i) => {
+        setCompleted(false);
         if (running) {
             logInterruptedSession();
         }
@@ -368,6 +377,7 @@ const FocusSession = () => {
     };
 
     const handleReset = () => {
+        setCompleted(false);
         if (running) {
             logInterruptedSession();
         } else {
@@ -422,6 +432,7 @@ const FocusSession = () => {
             {/* Timer Ring */}
             <div className="flex flex-col items-center gap-8 animate-fade-in-up delay-2">
                 <div className="relative" style={{ width: 240, height: 240 }}>
+                    <Timer3DVisual running={running} color={mode.ringColor} completed={completed} />
                     {/* Outer breathing glow */}
                     <div
                         className={`absolute inset-[-15px] rounded-full ${running ? 'animate-breathe' : ''}`}

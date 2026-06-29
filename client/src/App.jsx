@@ -17,7 +17,28 @@ import Onboarding from "./pages/Onboarding";
 import Schedule from "./pages/Schedule";
 import Pods from "./pages/Pods";
 
+import { useEffect } from "react";
+import { applyAppearanceSettings } from "./utils/theme";
+
 function App() {
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user?.settings?.appearance) {
+        applyAppearanceSettings(user.settings.appearance);
+      } else {
+        applyAppearanceSettings({
+          theme: "Light",
+          compactSidebar: false,
+          reduceMotion: false,
+          denseLayout: false
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load user appearance settings on mount", e);
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

@@ -4,6 +4,7 @@ import { getTasks } from "../services/taskService";
 import { getFocusSummary } from "../services/focusService";
 import { getProfile } from "../services/profileService";
 import { getDailyWebsiteUsage } from "../services/websiteUsageService";
+import TiltContainer from "../components/layout/TiltContainer";
 
 const buildStatCards = (taskStats, focusSummary, webStats) => [
     {
@@ -175,27 +176,28 @@ export default function Dashboard() {
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {buildStatCards(taskStats, focusSummary, webStats).map((s, i) => (
-                    <div
+                    <TiltContainer
                         key={s.label}
-                        className={`animate-fade-in-up delay-${i + 1} rounded-2xl p-5 relative overflow-hidden cursor-default transition-all duration-400 stat-card-glow group`}
+                        className={`animate-fade-in-up delay-${i + 1} rounded-2xl cursor-default stat-card-glow group`}
                         style={{
                             background: 'var(--bg-secondary)',
                             border: '1px solid var(--border-color)',
+                            boxShadow: 'var(--shadow-sm)',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)'; e.currentTarget.style.boxShadow = `0 16px 40px ${s.glow}, 0 0 0 1px var(--border-hover)`; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
                     >
-                        {/* Glow */}
-                        <div className="absolute inset-0 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
-                        <div className="relative z-10">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110" style={{ background: s.iconBg }}>
-                                {s.icon}
+                        <div className="p-5 relative overflow-hidden h-full w-full">
+                            {/* Glow */}
+                            <div className="absolute inset-0 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
+                            <div className="relative z-10">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110" style={{ background: s.iconBg }}>
+                                    {s.icon}
+                                </div>
+                                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-1">{s.label}</p>
+                                <p className="text-4xl font-extrabold tracking-tight" style={{ color: s.valueColor }}>{s.value}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{s.sub}</p>
                             </div>
-                            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-1">{s.label}</p>
-                            <p className="text-4xl font-extrabold tracking-tight" style={{ color: s.valueColor }}>{s.value}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{s.sub}</p>
                         </div>
-                    </div>
+                    </TiltContainer>
                 ))}
             </div>
 
@@ -232,136 +234,149 @@ export default function Dashboard() {
                 <div className="animate-fade-in-up delay-4 flex flex-col gap-4">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Today's Focus Goal</p>
-                        <div className="rounded-2xl p-6" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div
-                                    className="w-11 h-11 rounded-xl flex items-center justify-center"
-                                    style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
-                                >
-                                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Deep Work Goal</p>
-                                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{(DAILY_TARGET_MINUTES / 60).toFixed(1)} hours target</p>
-                                </div>
-                            </div>
-
-                            <div className="mb-4">
-                                <div className="flex justify-between text-xs text-slate-500 mb-2">
-                                    <span>{(focusSummary.todayFocusMinutes / 60).toFixed(1)}h completed</span>
-                                    <span className="text-slate-400 dark:text-slate-500">{(DAILY_TARGET_MINUTES / 60).toFixed(1)}h goal</span>
-                                </div>
-                                <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-primary)' }}>
+                        <TiltContainer
+                            className="rounded-2xl"
+                            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center gap-3 mb-6">
                                     <div
-                                        className="h-2 rounded-full transition-all duration-500"
-                                        style={{ width: `${progressPercent}%`, background: 'var(--accent-gradient)' }}
-                                    />
+                                        className="w-11 h-11 rounded-xl flex items-center justify-center"
+                                        style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
+                                    >
+                                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold">Deep Work Goal</p>
+                                        <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{(DAILY_TARGET_MINUTES / 60).toFixed(1)} hours target</p>
+                                    </div>
                                 </div>
+
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-xs text-slate-500 mb-2">
+                                        <span>{(focusSummary.todayFocusMinutes / 60).toFixed(1)}h completed</span>
+                                        <span className="text-slate-400 dark:text-slate-500">{(DAILY_TARGET_MINUTES / 60).toFixed(1)}h goal</span>
+                                    </div>
+                                    <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-primary)' }}>
+                                        <div
+                                            className="h-2 rounded-full transition-all duration-500"
+                                            style={{ width: `${progressPercent}%`, background: 'var(--accent-gradient)' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <p className="text-slate-700 dark:text-slate-350 text-xs font-light">
+                                    {progressPercent >= 100 
+                                        ? "🎉 Amazing! You met your daily focus goal!" 
+                                        : `You are ${progressPercent}% of the way to meeting your target today.`}
+                                </p>
+
+                                <button
+                                    onClick={() => navigate("/focus")}
+                                    className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400 transition-colors border-none bg-transparent cursor-pointer"
+                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--accent-color)'}
+                                >
+                                    Start focus session
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
                             </div>
-
-                            <p className="text-slate-700 dark:text-slate-350 text-xs font-light">
-                                {progressPercent >= 100 
-                                    ? "🎉 Amazing! You met your daily focus goal!" 
-                                    : `You are ${progressPercent}% of the way to meeting your target today.`}
-                            </p>
-
-                            <button
-                                onClick={() => navigate("/focus")}
-                                className="mt-4 flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400 transition-colors border-none bg-transparent cursor-pointer"
-                                onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-hover)'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'var(--accent-color)'}
-                            >
-                                Start focus session
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                            </button>
-                        </div>
+                        </TiltContainer>
                     </div>
 
                     {/* Website Usage Log */}
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Today's Web Activity</p>
-                        <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
-                                <span>🌐</span> Browser Telemetry
-                            </h3>
-                            
-                            {webStats.summary.totalActiveTime > 0 ? (
-                                <div className="space-y-4">
-                                    {/* Ratio bar */}
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between text-[10px] text-slate-550 dark:text-slate-400 font-bold uppercase tracking-wider">
-                                            <span>Breakdown</span>
-                                            <span className="text-teal-600 dark:text-teal-400">{(webStats.summary.productiveTime / 60).toFixed(0)}m Productive</span>
+                        <TiltContainer
+                            className="rounded-2xl"
+                            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}
+                        >
+                            <div className="p-5 space-y-4">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
+                                    <span>🌐</span> Browser Telemetry
+                                </h3>
+                                
+                                {webStats.summary.totalActiveTime > 0 ? (
+                                    <div className="space-y-4">
+                                        {/* Ratio bar */}
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between text-[10px] text-slate-550 dark:text-slate-400 font-bold uppercase tracking-wider">
+                                                <span>Breakdown</span>
+                                                <span className="text-teal-600 dark:text-teal-400">{(webStats.summary.productiveTime / 60).toFixed(0)}m Productive</span>
+                                            </div>
+                                            <div className="w-full h-3 rounded-full flex overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                                {webStats.summary.productiveTime > 0 && (
+                                                    <div 
+                                                        className="h-full bg-teal-500 transition-all duration-500" 
+                                                        style={{ width: `${(webStats.summary.productiveTime / webStats.summary.totalActiveTime) * 100}%` }} 
+                                                    />
+                                                )}
+                                                {webStats.summary.neutralTime > 0 && (
+                                                    <div 
+                                                        className="h-full bg-slate-400 dark:bg-slate-600 transition-all duration-500" 
+                                                        style={{ width: `${(webStats.summary.neutralTime / webStats.summary.totalActiveTime) * 100}%` }} 
+                                                    />
+                                                )}
+                                                {webStats.summary.distractingTime > 0 && (
+                                                    <div 
+                                                        className="h-full bg-rose-500 transition-all duration-500" 
+                                                        style={{ width: `${(webStats.summary.distractingTime / webStats.summary.totalActiveTime) * 100}%` }} 
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">
+                                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-500"/>Productive</span>
+                                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"/>Neutral</span>
+                                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500"/>Distracting</span>
+                                            </div>
                                         </div>
-                                        <div className="w-full h-3 rounded-full flex overflow-hidden bg-slate-100 dark:bg-slate-800">
-                                            {webStats.summary.productiveTime > 0 && (
-                                                <div 
-                                                    className="h-full bg-teal-500 transition-all duration-500" 
-                                                    style={{ width: `${(webStats.summary.productiveTime / webStats.summary.totalActiveTime) * 100}%` }} 
-                                                />
-                                            )}
-                                            {webStats.summary.neutralTime > 0 && (
-                                                <div 
-                                                    className="h-full bg-slate-400 dark:bg-slate-600 transition-all duration-500" 
-                                                    style={{ width: `${(webStats.summary.neutralTime / webStats.summary.totalActiveTime) * 100}%` }} 
-                                                />
-                                            )}
-                                            {webStats.summary.distractingTime > 0 && (
-                                                <div 
-                                                    className="h-full bg-rose-500 transition-all duration-500" 
-                                                    style={{ width: `${(webStats.summary.distractingTime / webStats.summary.totalActiveTime) * 100}%` }} 
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">
-                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-500"/>Productive</span>
-                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"/>Neutral</span>
-                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500"/>Distracting</span>
-                                        </div>
-                                    </div>
 
-                                    {/* Top domains */}
-                                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <p className="text-[10px] font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Top Visited Sites</p>
-                                        <div className="space-y-2">
-                                            {webStats.domains.slice(0, 4).map((d) => (
-                                                <div key={d.domain} className="flex justify-between items-center text-xs text-[var(--text-secondary)] border-b border-[var(--border-color)] pb-2 last:border-0 last:pb-0">
-                                                    <span className="font-semibold flex items-center gap-1.5">
-                                                        <span className={
-                                                            d.category === 'Productive' ? 'text-teal-500' :
-                                                            d.category === 'Distracting' ? 'text-rose-500' : 'text-slate-400'
-                                                        }>●</span>
-                                                        {d.domain}
-                                                    </span>
-                                                    <span className="text-[var(--text-muted)] font-medium">
-                                                        {d.minutes > 0 ? `${d.minutes}m` : `${d.timeSpent}s`}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                        {/* Top domains */}
+                                        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                            <p className="text-[10px] font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Top Visited Sites</p>
+                                            <div className="space-y-2">
+                                                {webStats.domains.slice(0, 4).map((d) => (
+                                                    <div key={d.domain} className="flex justify-between items-center text-xs text-[var(--text-secondary)] border-b border-[var(--border-color)] pb-2 last:border-0 last:pb-0">
+                                                        <span className="font-semibold flex items-center gap-1.5">
+                                                            <span className={
+                                                                d.category === 'Productive' ? 'text-teal-500' :
+                                                                d.category === 'Distracting' ? 'text-rose-500' : 'text-slate-400'
+                                                            }>●</span>
+                                                            {d.domain}
+                                                        </span>
+                                                        <span className="text-[var(--text-muted)] font-medium">
+                                                            {d.minutes > 0 ? `${d.minutes}m` : `${d.timeSpent}s`}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-6">
-                                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                                        No browser activity tracked today.
-                                    </p>
-                                    <p className="text-[10px] text-slate-500 mt-2">
-                                        Active tracking begins automatically once you start working with the companion extension.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                                ) : (
+                                    <div className="text-center py-6">
+                                        <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                                            No browser activity tracked today.
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 mt-2">
+                                            Active tracking begins automatically once you start working with the companion extension.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </TiltContainer>
                     </div>
 
                     {/* Academic Targets Panel */}
                     {studentProfile?.goals && (
                         <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Academic Focus Targets</p>
-                            <div className="rounded-2xl p-5" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                                <div className="space-y-3">
+                            <TiltContainer
+                                className="rounded-2xl"
+                                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}
+                            >
+                                <div className="p-5 space-y-3">
                                     {studentProfile.goals.academicGoals && studentProfile.goals.academicGoals.length > 0 && (
                                         <div>
                                             <p className="text-slate-550 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Academic Goals</p>
@@ -395,7 +410,7 @@ export default function Dashboard() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </TiltContainer>
                         </div>
                     )}
                 </div>

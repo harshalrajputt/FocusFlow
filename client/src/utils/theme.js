@@ -1,9 +1,13 @@
 export function applyAppearanceSettings(appearance) {
     if (!appearance) return;
     
-    // 1. Theme (Light vs Dark)
-    // Default to light theme. If user select "Dark (default)" or system preference indicates dark.
-    const isDark = appearance.theme === "Dark (default)";
+    // 1. Theme (Light vs Dark vs System)
+    let isDark = appearance.theme === "Dark (default)";
+    
+    if (appearance.theme === "System") {
+        isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    
     if (isDark) {
         document.body.classList.add("dark-theme");
         document.body.classList.remove("light-theme");
