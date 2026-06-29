@@ -16,7 +16,14 @@ export default function MainLayout() {
     const [modalOpen, setModalOpen] = useState(false);
 
     // Mandatory username choice overlay states
-    const [usernameInput, setUsernameInput] = useState("");
+    const [usernameInput, setUsernameInput] = useState(() => {
+        try {
+            const user = JSON.parse(localStorage.getItem("user") || "{}");
+            return user.username || "";
+        } catch (e) {
+            return "";
+        }
+    });
     const [usernameError, setUsernameError] = useState("");
     const [savingUsername, setSavingUsername] = useState(false);
     const [forceShowUsernameModal, setForceShowUsernameModal] = useState(false);
@@ -24,13 +31,18 @@ export default function MainLayout() {
     useEffect(() => {
         try {
             const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-            if (currentUser.hasSetUsername === false || !currentUser.username) {
+            if (currentUser.hasSetUsername === false || currentUser.hasSetUsername === "false" || !currentUser.username) {
                 setForceShowUsernameModal(true);
+                if (!usernameInput && currentUser.username) {
+                    setUsernameInput(currentUser.username);
+                }
+            } else {
+                setForceShowUsernameModal(false);
             }
         } catch (e) {
             console.error("Failed to check username status", e);
         }
-    }, []);
+    }, [usernameInput]);
 
     const handleUsernameSubmit = async (e) => {
         e.preventDefault();
@@ -47,7 +59,12 @@ export default function MainLayout() {
             const res = await updateUserProfile({ username: usernameVal });
             if (res.data.success) {
                 const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-                const updatedUser = { ...currentUser, ...res.data.user };
+                const updatedUser = { 
+                    ...currentUser, 
+                    ...res.data.user,
+                    hasSetUsername: true,
+                    username: usernameVal
+                };
                 localStorage.setItem("user", JSON.stringify(updatedUser));
                 setForceShowUsernameModal(false);
             }

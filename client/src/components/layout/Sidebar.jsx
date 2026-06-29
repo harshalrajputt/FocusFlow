@@ -199,6 +199,9 @@ export default function Sidebar() {
                                 className="min-w-0 flex-1 overflow-hidden"
                             >
                                 <p className="text-slate-900 dark:text-slate-200 text-sm font-semibold truncate">{user?.name || "User"}</p>
+                                {user?.username && (
+                                    <p className="text-sky-500 text-xs truncate font-semibold">@{user.username}</p>
+                                )}
                                 <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{user?.email || ""}</p>
                             </motion.div>
                         )}

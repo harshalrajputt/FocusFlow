@@ -413,6 +413,9 @@ export default function Navbar() {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs font-bold truncate">{user?.name || "Focus User"}</p>
+                                    {user?.username && (
+                                        <p className="text-sky-500 text-[10px] font-bold truncate">@{user.username}</p>
+                                    )}
                                     <p className="text-[10px] text-slate-500 truncate">{user?.email || ""}</p>
                                 </div>
                             </div>
