@@ -732,7 +732,7 @@ export default function Pods() {
                             <input
                                 required
                                 type="text"
-                                placeholder="Search by name or email..."
+                                placeholder="Search by username or email..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 style={{ ...inputStyle, flex: 1 }}
@@ -767,9 +767,11 @@ export default function Pods() {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user.name}</p>
-                                                    <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
-                                                </div>
+                                                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                         {user.name} {user.username && <span className="text-[10px] text-slate-500 font-normal">@{user.username}</span>}
+                                                     </p>
+                                                     <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                                                 </div>
                                             </div>
                                             
                                             {alreadyMember ? (

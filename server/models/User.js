@@ -7,6 +7,18 @@ const userSchema = new mongoose.Schema(
             required: true
         },
 
+        username: {
+            type: String,
+            unique: true,
+            trim: true,
+            lowercase: true
+        },
+
+        hasSetUsername: {
+            type: Boolean,
+            default: false
+        },
+
         email: {
             type: String,
             required: true,

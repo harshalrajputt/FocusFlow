@@ -9,38 +9,54 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, username, email, password } = req.body;
 
         // Validation
-        if (!name || !email || !password) {
+        if (!name || !username || !email || !password) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
             });
         }
 
-        // Check existing user
-        const existingUser = await User.findOne({ email });
-
-        if (existingUser) {
+        // Username validation
+        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        if (!usernameRegex.test(username)) {
             return res.status(400).json({
                 success: false,
-                message: "User already exists",
+                message: "Username must be 3-20 characters long and contain only letters, numbers, and underscores.",
+            });
+        }
+
+        // Check existing email
+        const existingUserEmail = await User.findOne({ email });
+        if (existingUserEmail) {
+            return res.status(400).json({
+                success: false,
+                message: "User with this email already exists",
+            });
+        }
+
+        // Check existing username
+        const existingUsername = await User.findOne({ username: username.toLowerCase() });
+        if (existingUsername) {
+            return res.status(400).json({
+                success: false,
+                message: "Username is already taken",
             });
         }
 
         // Hash password
         const salt = await bcrypt.genSalt(10);
-
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create user
         const user = await User.create({
             name,
+            username: username.toLowerCase().trim(),
+            hasSetUsername: true,
             email,
             password: hashedPassword,
         });
@@ -51,12 +67,12 @@ const registerUser = async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
             },
         });
     } catch (error) {
         console.log(error);
-
         res.status(500).json({
             success: false,
             message: "Server Error",
@@ -125,11 +141,13 @@ const loginUser = async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
                 timezone: user.timezone,
                 settings: user.settings,
                 profilePicture: user.profilePicture || "",
                 onboardingCompleted,
+                hasSetUsername: user.hasSetUsername,
             },
         });
     } catch (error) {
@@ -154,9 +172,28 @@ const updateUserProfile = async (req, res) => {
             });
         }
 
-        const { name, email, timezone, settings, profilePicture } = req.body;
+        const { name, username, email, timezone, settings, profilePicture } = req.body;
 
         if (name !== undefined) user.name = name.trim();
+        if (username !== undefined) {
+            const usernameVal = username.toLowerCase().trim();
+            const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+            if (!usernameRegex.test(usernameVal)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Username must be 3-20 characters long and contain only letters, numbers, and underscores."
+                });
+            }
+            const usernameExists = await User.findOne({ username: usernameVal, _id: { $ne: user._id } });
+            if (usernameExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Username is already taken"
+                });
+            }
+            user.username = usernameVal;
+            user.hasSetUsername = true;
+        }
         if (email !== undefined) {
             const emailExists = await User.findOne({ email, _id: { $ne: user._id } });
             if (emailExists) {
@@ -212,11 +249,13 @@ const updateUserProfile = async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
                 timezone: user.timezone,
                 settings: user.settings,
                 profilePicture: user.profilePicture || "",
                 onboardingCompleted,
+                hasSetUsername: user.hasSetUsername,
             },
         });
     } catch (error) {
@@ -394,11 +433,11 @@ const searchUsers = async (req, res) => {
         const users = await User.find({
             _id: { $ne: currentUserId },
             $or: [
-                { name: { $regex: query, $options: "i" } },
+                { username: { $regex: query, $options: "i" } },
                 { email: { $regex: query, $options: "i" } }
             ]
         })
-            .select("name email profilePicture xp streak")
+            .select("name username email profilePicture xp streak")
             .limit(10);
 
         res.status(200).json({

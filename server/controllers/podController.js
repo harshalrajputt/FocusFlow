@@ -51,8 +51,8 @@ const getUserPods = async (req, res) => {
     try {
         const userId = req.user.id;
         const pods = await Pod.find({ "members.userId": userId })
-            .populate("leaderId", "name email profilePicture")
-            .populate("members.userId", "name email profilePicture xp streak");
+            .populate("leaderId", "name username email profilePicture")
+            .populate("members.userId", "name username email profilePicture xp streak");
 
         return res.status(200).json({ success: true, pods });
     } catch (error) {
@@ -68,8 +68,8 @@ const getPodDetails = async (req, res) => {
         const { podId } = req.params;
 
         const pod = await Pod.findById(podId)
-            .populate("leaderId", "name email profilePicture")
-            .populate("members.userId", "name email profilePicture xp streak");
+            .populate("leaderId", "name username email profilePicture")
+            .populate("members.userId", "name username email profilePicture xp streak");
 
         if (!pod) {
             return res.status(404).json({ success: false, message: "Pod not found." });
@@ -83,7 +83,7 @@ const getPodDetails = async (req, res) => {
 
         // Fetch activity feed (recent 30 events)
         const activityFeed = await PodActivity.find({ podId })
-            .populate("userId", "name email profilePicture")
+            .populate("userId", "name username email profilePicture")
             .sort({ createdAt: -1 })
             .limit(30);
 
@@ -159,7 +159,7 @@ const getPendingInvites = async (req, res) => {
     try {
         const userId = req.user.id;
         const invites = await PodInvite.find({ toUserId: userId, status: "pending" })
-            .populate("fromUserId", "name email profilePicture")
+            .populate("fromUserId", "name username email profilePicture")
             .populate("podId", "name description");
 
         return res.status(200).json({ success: true, invites });

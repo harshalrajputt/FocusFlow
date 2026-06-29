@@ -7,12 +7,56 @@ import { getMissedSessions } from "../../services/scheduleService";
 import MissedSessionModal from "../schedule/MissedSessionModal";
 import Background3DCanvas from "./Background3DCanvas";
 import { AnimatePresence, motion } from "framer-motion";
+import { updateUserProfile } from "../../services/authService";
 
 export default function MainLayout() {
     const location = useLocation();
     const [showToast, setShowToast] = useState(false);
     const [missedSessions, setMissedSessions] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
+
+    // Mandatory username choice overlay states
+    const [usernameInput, setUsernameInput] = useState("");
+    const [usernameError, setUsernameError] = useState("");
+    const [savingUsername, setSavingUsername] = useState(false);
+    const [forceShowUsernameModal, setForceShowUsernameModal] = useState(false);
+
+    useEffect(() => {
+        try {
+            const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+            if (currentUser.hasSetUsername === false || !currentUser.username) {
+                setForceShowUsernameModal(true);
+            }
+        } catch (e) {
+            console.error("Failed to check username status", e);
+        }
+    }, []);
+
+    const handleUsernameSubmit = async (e) => {
+        e.preventDefault();
+        setUsernameError("");
+        const usernameVal = usernameInput.toLowerCase().trim();
+        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        if (!usernameRegex.test(usernameVal)) {
+            setUsernameError("Username must be 3-20 characters long and contain only letters, numbers, and underscores.");
+            return;
+        }
+
+        setSavingUsername(true);
+        try {
+            const res = await updateUserProfile({ username: usernameVal });
+            if (res.data.success) {
+                const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+                const updatedUser = { ...currentUser, ...res.data.user };
+                localStorage.setItem("user", JSON.stringify(updatedUser));
+                setForceShowUsernameModal(false);
+            }
+        } catch (err) {
+            setUsernameError(err.response?.data?.message || "Failed to update username. Try another one.");
+        } finally {
+            setSavingUsername(false);
+        }
+    };
 
     const checkMissed = async () => {
         try {
@@ -180,6 +224,76 @@ export default function MainLayout() {
                 onRecovered={handleRecovered}
                 onClose={() => setModalOpen(false)}
             />
+
+            {/* Mandatory Username Setup Modal */}
+            {forceShowUsernameModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-955/80 backdrop-blur-md animate-fade-in">
+                    <div 
+                        className="w-full max-w-md p-8 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/90 shadow-2xl relative"
+                        style={{
+                            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+                        }}
+                    >
+                        <div className="flex flex-col items-center text-center mb-6">
+                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'var(--accent-gradient)', boxShadow: '0 8px 24px var(--accent-glow)' }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-extrabold text-[var(--text-primary)]">Choose Your Username</h3>
+                            <p className="text-xs text-[var(--text-muted)] mt-2 max-w-xs">
+                                FocusFlow now uses unique usernames to let friends find and invite you to accountability pods.
+                            </p>
+                        </div>
+
+                        {usernameError && (
+                            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-red-400 text-xs">
+                                <svg className="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                                <span className="leading-tight">{usernameError}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleUsernameSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Unique Username</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">@</span>
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="johndoe"
+                                        value={usernameInput}
+                                        onChange={(e) => {
+                                            setUsernameError("");
+                                            setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+                                        }}
+                                        className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] outline-none transition-all duration-200 pl-8 pr-4 py-3 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-glow)]"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={savingUsername || !usernameInput.trim()}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-2 cursor-pointer"
+                                style={{
+                                    background: 'var(--accent-gradient)',
+                                    boxShadow: '0 4px 12px var(--accent-glow)',
+                                }}
+                            >
+                                {savingUsername ? (
+                                    <><svg className="animate-spin-slow w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Saving...</>
+                                ) : (
+                                    <>Confirm Username <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

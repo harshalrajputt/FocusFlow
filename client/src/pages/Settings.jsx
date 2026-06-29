@@ -152,6 +152,7 @@ const Settings = () => {
     
     // Profile states
     const [name, setName] = useState(user.name || "");
+    const [username, setUsername] = useState(user.username || "");
     const [email, setEmail] = useState(user.email || "");
     const [timezone, setTimezone] = useState(user.timezone || "UTC+05:30 — India");
     const [profilePicture, setProfilePicture] = useState(user.profilePicture || "");
@@ -195,13 +196,13 @@ const Settings = () => {
 
     const handleSaveProfile = async (e) => {
         e.preventDefault();
-        if (!name.trim() || !email.trim()) {
-            showToast("Name and email are required", "error");
+        if (!name.trim() || !username.trim() || !email.trim()) {
+            showToast("Name, username, and email are required", "error");
             return;
         }
         setLoading(true);
         try {
-            const res = await updateUserProfile({ name, email, timezone, profilePicture });
+            const res = await updateUserProfile({ name, username, email, timezone, profilePicture });
             if (res.data.success) {
                 const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
                 const updatedUser = { ...currentUser, ...res.data.user };
@@ -434,6 +435,11 @@ const Settings = () => {
                                     <Field label="Full Name" hint="Your display name across the app">
                                         <div style={{ width: 220 }}>
                                             <FInput value={name} onChange={e => setName(e.target.value)} required={true} placeholder="Your name" />
+                                        </div>
+                                    </Field>
+                                    <Field label="Username" hint="Your unique handle (@username)">
+                                        <div style={{ width: 220 }}>
+                                            <FInput value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} required={true} placeholder="username" />
                                         </div>
                                     </Field>
                                     <Field label="Email Address" hint="Used for login and notifications">

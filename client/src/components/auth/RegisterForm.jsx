@@ -7,7 +7,7 @@ const inputBase = "w-full bg-[var(--bg-primary)] border border-[var(--border-col
 export default function RegisterForm() {
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+    const [formData, setFormData] = useState({ name: "", username: "", email: "", password: "", confirmPassword: "" });
     const [showPwd, setShowPwd] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -15,7 +15,11 @@ export default function RegisterForm() {
 
     const handleChange = (e) => {
         setError("");
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let value = e.target.value;
+        if (e.target.name === "username") {
+            value = value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+        }
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     // Password strength
@@ -51,7 +55,7 @@ export default function RegisterForm() {
         if (formData.password !== formData.confirmPassword) { setError("Passwords do not match."); return; }
         setLoading(true); setError("");
         try {
-            const response = await registerUser({ name: formData.name, email: formData.email, password: formData.password });
+            const response = await registerUser({ name: formData.name, username: formData.username, email: formData.email, password: formData.password });
             console.log(response.data);
             navigate("/login");
         } catch (err) {
@@ -88,6 +92,15 @@ export default function RegisterForm() {
                 <div className="relative">
                     <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" required className={inputBase} onFocus={focusStyle} onBlur={blurStyle} />
+                </div>
+            </div>
+
+            {/* Username */}
+            <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Username</label>
+                <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none text-sm font-semibold">@</span>
+                    <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="username" required className={inputBase} onFocus={focusStyle} onBlur={blurStyle} />
                 </div>
             </div>
 
