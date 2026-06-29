@@ -109,7 +109,7 @@ export default function MainLayout() {
     };
 
     return (
-        <div className="flex min-h-screen relative" style={{ background: 'var(--bg-primary)' }}>
+        <div className="flex min-h-screen relative bg-transparent">
             <Background3DCanvas />
             <Sidebar />
             <div className="flex-1 flex flex-col min-w-0">

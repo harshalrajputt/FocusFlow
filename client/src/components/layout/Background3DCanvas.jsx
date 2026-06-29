@@ -1,18 +1,21 @@
 import { useEffect, useRef } from "react";
 
 export default function Background3DCanvas() {
-    const canvasRef = useRef(null);
+    const bgCanvasRef = useRef(null);
+    const fgCanvasRef = useRef(null);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+        const bgCanvas = bgCanvasRef.current;
+        const fgCanvas = fgCanvasRef.current;
+        if (!bgCanvas || !fgCanvas) return;
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+        const bgCtx = bgCanvas.getContext("2d");
+        const fgCtx = fgCanvas.getContext("2d");
+        if (!bgCtx || !fgCtx) return;
 
         let animationFrameId;
-        let width = (canvas.width = window.innerWidth);
-        let height = (canvas.height = window.innerHeight);
+        let width = (bgCanvas.width = fgCanvas.width = window.innerWidth);
+        let height = (bgCanvas.height = fgCanvas.height = window.innerHeight);
 
         const isReducedMotion = () => document.body.classList.contains("reduce-motion");
 
@@ -20,7 +23,6 @@ export default function Background3DCanvas() {
             const style = getComputedStyle(document.body);
             return {
                 accent: style.getPropertyValue("--accent-color").trim() || "#0284c7",
-                accentGlow: style.getPropertyValue("--accent-glow").trim() || "rgba(2, 132, 199, 0.15)",
                 border: style.getPropertyValue("--border-color").trim() || "rgba(100, 116, 139, 0.12)",
                 textMuted: style.getPropertyValue("--text-muted").trim() || "#64748b",
             };
@@ -28,38 +30,86 @@ export default function Background3DCanvas() {
 
         let colors = getColors();
 
-        // Mouse target and follower spring
-        const mouse = { x: width / 2, y: height / 2, lastX: width / 2, lastY: height / 2, speed: 0 };
-        const follower = { x: width / 2, y: height / 2 };
+        // 1. CONSTELLATION BACKGROUND SETUP
+        const bgParticleCount = Math.min(50, Math.floor((width * height) / 30000));
+        const bgParticles = [];
+        const mouse = { x: width / 2, y: height / 2, speed: 0, radius: 150 };
 
-        // 3D Icosahedron vertices (glowing cursor companion)
-        const t = (1.0 + Math.sqrt(5.0)) / 2.0;
-        const icosahedronVertices = [
-            { x: -1, y: t, z: 0 }, { x: 1, y: t, z: 0 }, { x: -1, y: -t, z: 0 }, { x: 1, y: -t, z: 0 },
-            { x: 0, y: -1, z: t }, { x: 0, y: 1, z: t }, { x: 0, y: -1, z: -t }, { x: 0, y: 1, z: -t },
-            { x: t, y: 0, z: -1 }, { x: t, y: 0, z: 1 }, { x: -t, y: 0, z: -1 }, { x: -t, y: 0, z: 1 }
-        ];
-        // Normalize vertices to target scale
-        const icoRadius = 35;
-        icosahedronVertices.forEach(v => {
-            const length = Math.hypot(v.x, v.y, v.z);
-            v.x = (v.x / length) * icoRadius;
-            v.y = (v.y / length) * icoRadius;
-            v.z = (v.z / length) * icoRadius;
-        });
+        class BGParticle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.z = Math.random() * 1.5 + 0.5; // depth
+                this.vx = (Math.random() - 0.5) * 0.35;
+                this.vy = (Math.random() - 0.5) * 0.35;
+                this.radius = (Math.random() * 1.8 + 0.8) * this.z;
+            }
 
-        // 30 Edges of the icosahedron
-        const icosahedronEdges = [
-            [0, 11], [0, 5], [0, 1], [0, 7], [0, 10],
-            [1, 5], [1, 9], [1, 8], [1, 7],
-            [2, 11], [2, 4], [2, 5], [2, 10], [2, 11],
-            [2, 3], [2, 6], [3, 9], [3, 8], [3, 4],
-            [3, 6], [4, 9], [4, 5], [4, 11], [4, 2], [4, 9], [4, 10], [4, 6],
-            [5, 9], [5, 11], [6, 10], [6, 8], [7, 10], [7, 8],
-            [8, 9], [9, 11]
-        ];
+            update() {
+                this.x += this.vx * this.z;
+                this.y += this.vy * this.z;
 
-        // 3D Cube vertices (for cursor trail particles)
+                // Wrap boundaries
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+
+                // Mouse push force
+                if (mouse.x !== null && mouse.y !== null) {
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < mouse.radius) {
+                        const force = (mouse.radius - dist) / mouse.radius;
+                        const angle = Math.atan2(dy, dx);
+                        const targetX = this.x + Math.cos(angle) * force * 12;
+                        const targetY = this.y + Math.sin(angle) * force * 12;
+                        
+                        this.x += (targetX - this.x) * 0.08;
+                        this.y += (targetY - this.y) * 0.08;
+                    }
+                }
+            }
+
+            draw() {
+                bgCtx.beginPath();
+                bgCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                bgCtx.fillStyle = colors.accent + "22";
+                bgCtx.fill();
+            }
+        }
+
+        const initBG = () => {
+            bgParticles.length = 0;
+            for (let i = 0; i < bgParticleCount; i++) {
+                bgParticles.push(new BGParticle());
+            }
+        };
+
+        const drawBGLines = () => {
+            for (let i = 0; i < bgParticles.length; i++) {
+                for (let j = i + 1; j < bgParticles.length; j++) {
+                    const dx = bgParticles[i].x - bgParticles[j].x;
+                    const dy = bgParticles[i].y - bgParticles[j].y;
+                    const dist = Math.hypot(dx, dy);
+                    const maxDist = 110;
+
+                    if (dist < maxDist) {
+                        const alpha = ((maxDist - dist) / maxDist) * 0.09 * (bgParticles[i].z * bgParticles[j].z);
+                        bgCtx.beginPath();
+                        bgCtx.moveTo(bgParticles[i].x, bgParticles[i].y);
+                        bgCtx.lineTo(bgParticles[j].x, bgParticles[j].y);
+                        bgCtx.strokeStyle = colors.accent + Math.floor(alpha * 255).toString(16).padStart(2, "0");
+                        bgCtx.lineWidth = 0.7 * bgParticles[i].z;
+                        bgCtx.stroke();
+                    }
+                }
+            }
+        };
+
+
+        // 2. FOREGROUND 3D CURSOR TRAIL SETUP
         const cubeVertices = [
             { x: -1, y: -1, z: -1 }, { x: 1, y: -1, z: -1 }, { x: 1, y: 1, z: -1 }, { x: -1, y: 1, z: -1 },
             { x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }
@@ -70,19 +120,15 @@ export default function Background3DCanvas() {
             [0, 4], [1, 5], [2, 6], [3, 7]  // Connectors
         ];
 
-        // 3D Rotation matrices helper
         const rotate3D = (point, ax, ay, az) => {
-            // X rotation
             let cos = Math.cos(ax), sin = Math.sin(ax);
             let y1 = point.y * cos - point.z * sin;
             let z1 = point.y * sin + point.z * cos;
             
-            // Y rotation
             cos = Math.cos(ay); sin = Math.sin(ay);
             let x2 = point.x * cos - z1 * sin;
             let z2 = point.x * sin + z1 * cos;
 
-            // Z rotation
             cos = Math.cos(az); sin = Math.sin(az);
             let x3 = x2 * cos - y1 * sin;
             let y3 = x2 * sin + y1 * cos;
@@ -90,14 +136,6 @@ export default function Background3DCanvas() {
             return { x: x3, y: y3, z: z2 };
         };
 
-        // Rotation angles for main icosahedron
-        const icoAngles = { x: 0, y: 0, z: 0 };
-
-        // Cursor 3D Trail list
-        const trail = [];
-        let frameCount = 0;
-
-        // Perspective Projection calculation
         const project = (x, y, z, cx, cy) => {
             const perspective = 300;
             const scale = perspective / (perspective + z);
@@ -108,68 +146,47 @@ export default function Background3DCanvas() {
             };
         };
 
-        // Render loop
+        const trail = [];
+        let frameCount = 0;
+
+
+        // 3. ANIMATION RENDERING LOOP
         const animate = () => {
             if (isReducedMotion()) {
-                ctx.clearRect(0, 0, width, height);
+                bgCtx.clearRect(0, 0, width, height);
+                fgCtx.clearRect(0, 0, width, height);
                 return;
             }
 
-            ctx.clearRect(0, 0, width, height);
+            // Clear canvases
+            bgCtx.clearRect(0, 0, width, height);
+            fgCtx.clearRect(0, 0, width, height);
 
             frameCount++;
 
-            // 1. Update follower position with spring lag
-            follower.x += (mouse.x - follower.x) * 0.08;
-            follower.y += (mouse.y - follower.y) * 0.08;
+            // ─── A. BACKGROUND CONSTELLATION ───
+            // Draw ambient cursor spotlight glow
+            if (mouse.x !== null && mouse.y !== null) {
+                const grad = bgCtx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 250);
+                grad.addColorStop(0, colors.accent + "09");
+                grad.addColorStop(1, "transparent");
+                bgCtx.fillStyle = grad;
+                bgCtx.fillRect(0, 0, width, height);
+            }
 
-            // 2. Rotate core icosahedron
-            // Rotate faster if the mouse is moving
-            const rotateSpeed = 0.006 + Math.min(0.05, mouse.speed * 0.002);
-            icoAngles.x += rotateSpeed;
-            icoAngles.y += rotateSpeed * 1.2;
-
-            // 3. Draw 3D Cursor Follower Icosahedron
-            const projectedIco = icosahedronVertices.map(v => {
-                const rotated = rotate3D(v, icoAngles.x, icoAngles.y, icoAngles.z);
-                return project(rotated.x, rotated.y, rotated.z, follower.x, follower.y);
+            bgParticles.forEach((p) => {
+                p.update();
+                p.draw();
             });
+            drawBGLines();
 
-            // Draw glowing icosahedron faces/edges
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = colors.accent;
-            ctx.lineWidth = 1.2;
-
-            icosahedronEdges.forEach(([start, end]) => {
-                const p1 = projectedIco[start];
-                const p2 = projectedIco[end];
-                if (p1.visible && p2.visible) {
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    // Deeper blue glow lines
-                    ctx.strokeStyle = colors.accent + "44";
-                    ctx.stroke();
-                }
-            });
-
-            // Draw vertices
-            projectedIco.forEach(p => {
-                if (p.visible) {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
-                    ctx.fillStyle = colors.accent;
-                    ctx.fill();
-                }
-            });
-
-            // 4. Handle and Draw 3D Cursor Trail Cubes
-            // Spawn new cubes as mouse moves
+            // ─── B. FOREGROUND 3D CURSOR TRAIL ───
+            // Spawn cubes on movement
             if (mouse.speed > 1.5 && frameCount % 3 === 0) {
                 trail.push({
                     x: mouse.x,
                     y: mouse.y,
-                    size: Math.random() * 12 + 6,
+                    size: Math.random() * 11 + 5,
                     life: 1.0,
                     ax: Math.random() * Math.PI,
                     ay: Math.random() * Math.PI,
@@ -181,22 +198,20 @@ export default function Background3DCanvas() {
                 });
             }
 
-            // Clean up and draw trail
+            // Draw and decay trail
             for (let i = trail.length - 1; i >= 0; i--) {
                 const item = trail[i];
-                item.life -= 0.015; // decay life
+                item.life -= 0.018; // decay speed
 
                 if (item.life <= 0) {
                     trail.splice(i, 1);
                     continue;
                 }
 
-                // Update cube rotation
                 item.ax += item.vax;
                 item.ay += item.vay;
                 item.az += item.vaz;
 
-                // Scale cube points
                 const curCubeVertices = cubeVertices.map(v => ({
                     x: v.x * item.size * item.life,
                     y: v.y * item.size * item.life,
@@ -208,35 +223,31 @@ export default function Background3DCanvas() {
                     return project(rotated.x, rotated.y, rotated.z, item.x, item.y);
                 });
 
-                // Draw cube edges with fading opacity
-                ctx.lineWidth = 1.0 * item.life;
-                ctx.shadowBlur = 5 * item.life;
-                ctx.shadowColor = item.color;
+                fgCtx.lineWidth = 0.9 * item.life;
+                fgCtx.shadowBlur = 4 * item.life;
+                fgCtx.shadowColor = item.color;
                 
                 cubeEdges.forEach(([start, end]) => {
                     const p1 = projectedCube[start];
                     const p2 = projectedCube[end];
                     if (p1.visible && p2.visible) {
-                        ctx.beginPath();
-                        ctx.moveTo(p1.x, p1.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        const opacity = Math.floor(item.life * 0.25 * 255).toString(16).padStart(2, "0");
-                        ctx.strokeStyle = item.color + opacity;
-                        ctx.stroke();
+                        fgCtx.beginPath();
+                        fgCtx.moveTo(p1.x, p1.y);
+                        fgCtx.lineTo(p2.x, p2.y);
+                        const opacity = Math.floor(item.life * 0.22 * 255).toString(16).padStart(2, "0");
+                        fgCtx.strokeStyle = item.color + opacity;
+                        fgCtx.stroke();
                     }
                 });
             }
 
-            // Reset shadows
-            ctx.shadowBlur = 0;
-
-            // Decelerate mouse speed calculation
-            mouse.speed *= 0.95;
+            fgCtx.shadowBlur = 0; // reset
+            mouse.speed *= 0.94; // decelerate
 
             animationFrameId = requestAnimationFrame(animate);
         };
 
-        // Mouse listeners
+        // Listeners
         const handleMouseMove = (e) => {
             mouse.speed = Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y);
             mouse.x = e.clientX;
@@ -244,15 +255,15 @@ export default function Background3DCanvas() {
         };
 
         const handleMouseLeave = () => {
-            // center follower
-            mouse.x = width / 2;
-            mouse.y = height / 2;
+            mouse.x = null;
+            mouse.y = null;
             mouse.speed = 0;
         };
 
         const handleResize = () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+            width = bgCanvas.width = fgCanvas.width = window.innerWidth;
+            height = bgCanvas.height = fgCanvas.height = window.innerHeight;
+            initBG();
         };
 
         const observer = new MutationObserver(() => {
@@ -264,6 +275,7 @@ export default function Background3DCanvas() {
         window.addEventListener("mouseleave", handleMouseLeave);
         window.addEventListener("resize", handleResize);
 
+        initBG();
         animate();
 
         return () => {
@@ -276,14 +288,19 @@ export default function Background3DCanvas() {
     }, []);
 
     return (
-        <canvas
-            ref={canvasRef}
-            className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
-            style={{ 
-                zIndex: 9999, // Overlay above all content elements so the trail is visible on top of cards
-                mixBlendMode: "normal", 
-                opacity: 0.95 
-            }}
-        />
+        <>
+            {/* Background Constellation Canvas */}
+            <canvas
+                ref={bgCanvasRef}
+                className="fixed inset-0 pointer-events-none z-[-1]"
+                style={{ mixBlendMode: "normal", opacity: 0.8 }}
+            />
+            {/* Foreground 3D Cursor Trail Canvas */}
+            <canvas
+                ref={fgCanvasRef}
+                className="fixed inset-0 pointer-events-none z-[9999]"
+                style={{ mixBlendMode: "normal", opacity: 0.95 }}
+            />
+        </>
     );
 }
