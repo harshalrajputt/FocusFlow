@@ -79,8 +79,7 @@ const getPodDetails = async (req, res) => {
             return res.status(404).json({ success: false, message: "Pod not found." });
         }
 
-        // Check membership
-        const isMember = pod.members.some(m => m.userId._id.toString() === userId);
+        const isMember = pod.members.some(m => m.userId && m.userId._id && m.userId._id.toString() === userId);
         if (!isMember) {
             return res.status(403).json({ success: false, message: "You are not a member of this pod." });
         }
@@ -125,14 +124,13 @@ const inviteMember = async (req, res) => {
             return res.status(404).json({ success: false, message: "Pod not found." });
         }
 
-        // Check if inviter is in pod
-        const isMember = pod.members.some(m => m.userId.toString() === fromUserId);
+        const isMember = pod.members.some(m => m.userId && m.userId.toString() === fromUserId);
         if (!isMember) {
             return res.status(403).json({ success: false, message: "You must be a member of the pod to invite others." });
         }
 
         // Check if recipient is already in pod
-        const isRecipientMember = pod.members.some(m => m.userId.toString() === toUserId);
+        const isRecipientMember = pod.members.some(m => m.userId && m.userId.toString() === toUserId);
         if (isRecipientMember) {
             return res.status(400).json({ success: false, message: "User is already a member of this pod." });
         }
@@ -222,8 +220,7 @@ const respondToInvite = async (req, res) => {
             return res.status(404).json({ success: false, message: "Pod not found or has been dissolved." });
         }
 
-        // Check if already in pod (safeguard)
-        const alreadyMember = pod.members.some(m => m.userId.toString() === userId);
+        const alreadyMember = pod.members.some(m => m.userId && m.userId.toString() === userId);
         if (!alreadyMember) {
             pod.members.push({
                 userId,
@@ -254,7 +251,7 @@ const respondToInvite = async (req, res) => {
 
         // Notify other pod members
         const notifications = pod.members
-            .filter(m => m.userId.toString() !== userId)
+            .filter(m => m.userId && m.userId.toString() !== userId)
             .map(m => ({
                 userId: m.userId,
                 title: "New member joined!",
@@ -285,7 +282,7 @@ const leavePod = async (req, res) => {
             return res.status(404).json({ success: false, message: "Pod not found." });
         }
 
-        const memberIndex = pod.members.findIndex(m => m.userId.toString() === userId);
+        const memberIndex = pod.members.findIndex(m => m.userId && m.userId.toString() === userId);
         if (memberIndex === -1) {
             return res.status(400).json({ success: false, message: "You are not a member of this pod." });
         }
@@ -322,8 +319,10 @@ const leavePod = async (req, res) => {
         await activity.save();
 
         // Notify remaining members
-        const notifications = pod.members.map(m => ({
-            userId: m.userId,
+        const notifications = pod.members
+            .filter(m => m.userId)
+            .map(m => ({
+                userId: m.userId,
             title: "Member left",
             message: `${user.name} has left "${pod.name}".`,
             type: "pod",
@@ -355,8 +354,8 @@ const sendNudge = async (req, res) => {
         }
 
         // Verify both in the same pod
-        const isFromMember = pod.members.some(m => m.userId.toString() === fromUserId);
-        const isToMember = pod.members.some(m => m.userId.toString() === toUserId);
+        const isFromMember = pod.members.some(m => m.userId && m.userId.toString() === fromUserId);
+        const isToMember = pod.members.some(m => m.userId && m.userId.toString() === toUserId);
 
         if (!isFromMember || !isToMember) {
             return res.status(403).json({ success: false, message: "Both users must be members of this pod." });
@@ -410,7 +409,7 @@ const createChallenge = async (req, res) => {
         }
 
         // Verify membership
-        const isMember = pod.members.some(m => m.userId.toString() === userId);
+        const isMember = pod.members.some(m => m.userId && m.userId.toString() === userId);
         if (!isMember) {
             return res.status(403).json({ success: false, message: "You must be a member of the pod to create challenges." });
         }
@@ -418,7 +417,9 @@ const createChallenge = async (req, res) => {
         // Initialize progress map
         const progress = new Map();
         pod.members.forEach(member => {
-            progress.set(member.userId.toString(), 0);
+            if (member.userId) {
+                progress.set(member.userId.toString(), 0);
+            }
         });
 
         const newChallenge = {
@@ -445,7 +446,7 @@ const createChallenge = async (req, res) => {
 
         // Notify other pod members
         const notifications = pod.members
-            .filter(m => m.userId.toString() !== userId)
+            .filter(m => m.userId && m.userId.toString() !== userId)
             .map(m => ({
                 userId: m.userId,
                 title: "New Group Challenge!",
@@ -484,7 +485,7 @@ const reactToActivity = async (req, res) => {
 
         // Check pod membership
         const pod = await Pod.findById(podId);
-        if (!pod || !pod.members.some(m => m.userId.toString() === userId)) {
+        if (!pod || !pod.members.some(m => m.userId && m.userId.toString() === userId)) {
             return res.status(403).json({ success: false, message: "Not a pod member." });
         }
 
@@ -536,7 +537,7 @@ const getWeeklyReport = async (req, res) => {
         const pod = await Pod.findById(podId).populate("members.userId", "name username profilePicture");
         if (!pod) return res.status(404).json({ success: false, message: "Pod not found." });
 
-        const isMember = pod.members.some(m => (m.userId._id || m.userId).toString() === userId);
+        const isMember = pod.members.some(m => m.userId && (m.userId._id || m.userId).toString() === userId);
         if (!isMember) return res.status(403).json({ success: false, message: "Not a pod member." });
 
         const now = new Date();
@@ -548,6 +549,7 @@ const getWeeklyReport = async (req, res) => {
         let totalPodXP = 0;
 
         for (const member of pod.members) {
+            if (!member || !member.userId) continue;
             const uid = member.userId._id || member.userId;
             const sessions = await FocusSession.find({
                 userId: uid,
@@ -607,7 +609,7 @@ const startSprint = async (req, res) => {
         const pod = await Pod.findById(podId);
         if (!pod) return res.status(404).json({ success: false, message: "Pod not found." });
 
-        const isMember = pod.members.some(m => m.userId.toString() === userId);
+        const isMember = pod.members.some(m => m.userId && m.userId.toString() === userId);
         if (!isMember) return res.status(403).json({ success: false, message: "Not a pod member." });
 
         // Only one active sprint per pod at a time
@@ -640,7 +642,7 @@ const startSprint = async (req, res) => {
 
         // Notify all other members
         const notifications = pod.members
-            .filter(m => m.userId.toString() !== userId)
+            .filter(m => m.userId && m.userId.toString() !== userId)
             .map(m => ({
                 userId: m.userId,
                 title: "⚡ Group Sprint Started!",
@@ -826,20 +828,24 @@ const respondToRivalChallenge = async (req, res) => {
         const challengerPod = await Pod.findById(rivalry.challengerPodId);
 
         // Notify both pods
-        const challengerNotifs = challengerPod.members.map(m => ({
-            userId: m.userId,
-            title: `⚔️ Rivalry ACCEPTED!`,
-            message: `"${challengedPod.name}" accepted your challenge! The 7-day XP battle has begun!`,
-            type: "pod",
-            read: false
-        }));
-        const challengedNotifs = challengedPod.members.map(m => ({
-            userId: m.userId,
-            title: `⚔️ Rivalry BEGINS!`,
-            message: `Your pod has entered a 7-day XP battle vs "${challengerPod.name}"! Start studying!`,
-            type: "pod",
-            read: false
-        }));
+        const challengerNotifs = challengerPod.members
+            .filter(m => m.userId)
+            .map(m => ({
+                userId: m.userId,
+                title: `⚔️ Rivalry ACCEPTED!`,
+                message: `"${challengedPod.name}" accepted your challenge! The 7-day XP battle has begun!`,
+                type: "pod",
+                read: false
+            }));
+        const challengedNotifs = challengedPod.members
+            .filter(m => m.userId)
+            .map(m => ({
+                userId: m.userId,
+                title: `⚔️ Rivalry BEGINS!`,
+                message: `Your pod has entered a 7-day XP battle vs "${challengerPod.name}"! Start studying!`,
+                type: "pod",
+                read: false
+            }));
         await Notification.insertMany([...challengerNotifs, ...challengedNotifs]);
 
         // Emit to both pod rooms

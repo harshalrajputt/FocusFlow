@@ -137,7 +137,7 @@ const logSession = async (req, res) => {
                         // 3. Check and update Pod Streak
                         const todayStr = new Date().toLocaleDateString("en-CA");
                         if (pod.lastActiveDate !== todayStr) {
-                            const memberIds = pod.members.map(m => m.userId);
+                            const memberIds = pod.members.map(m => m.userId).filter(Boolean);
                             const activeMembersToday = await FocusSession.distinct("userId", {
                                 userId: { $in: memberIds },
                                 sessionType: "Focus",
@@ -228,7 +228,7 @@ const logSession = async (req, res) => {
                         await act.save();
 
                         // 5. Send notifications to other pod members
-                        const otherMembers = pod.members.filter(m => m.userId.toString() !== req.user.id);
+                         const otherMembers = pod.members.filter(m => m.userId && m.userId.toString() !== req.user.id);
                         const notifications = otherMembers.map(m => ({
                             userId: m.userId,
                             title: "Pod Member Progress!",

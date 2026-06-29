@@ -796,7 +796,7 @@ const recoverSession = async (req, res) => {
                         });
                         await activity.save();
 
-                        const otherMembers = pod.members.filter(m => m.userId.toString() !== userId);
+                        const otherMembers = pod.members.filter(m => m.userId && m.userId.toString() !== userId);
                         const notifications = otherMembers.map(m => ({
                             userId: m.userId,
                             title: "Pod Member Recovered Session",

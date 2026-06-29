@@ -65,7 +65,9 @@ const runWeeklyReport = async (io) => {
         const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
         for (const pod of pods) {
-            const memberIds = pod.members.map((m) => m.userId._id || m.userId);
+            const memberIds = pod.members
+                .map((m) => m.userId && (m.userId._id || m.userId))
+                .filter(Boolean);
             if (memberIds.length === 0) continue;
 
             const xpMap = await getMemberXPInRange(memberIds, weekAgo, now);
@@ -79,7 +81,7 @@ const runWeeklyReport = async (io) => {
             });
 
             const mvpMember = pod.members.find(
-                (m) => (m.userId._id || m.userId).toString() === mvpId
+                (m) => m.userId && (m.userId._id || m.userId).toString() === mvpId
             );
             const mvpName = mvpMember?.userId?.name || "Unknown";
 
@@ -97,22 +99,26 @@ const runWeeklyReport = async (io) => {
             });
 
             // Notify every member
-            const notifications = pod.members.map((m) => ({
-                userId: m.userId._id || m.userId,
-                title: "📊 Your Pod's Weekly Report is Ready!",
-                message: `${pod.name} earned ${totalPodXP} XP this week. MVP: ${mvpName}. Check your pod!`,
-                type: "pod",
-                read: false
-            }));
+            const notifications = pod.members
+                .filter((m) => m.userId)
+                .map((m) => ({
+                    userId: m.userId._id || m.userId,
+                    title: "📊 Your Pod's Weekly Report is Ready!",
+                    message: `${pod.name} earned ${totalPodXP} XP this week. MVP: ${mvpName}. Check your pod!`,
+                    type: "pod",
+                    read: false
+                }));
             if (notifications.length > 0) {
                 await Notification.insertMany(notifications);
                 // Emit real-time notifications
                 pod.members.forEach((m) => {
-                    const uid = (m.userId._id || m.userId).toString();
-                    emitToUser(io, uid, "notification:new", {
-                        title: "📊 Weekly Report Ready!",
-                        message: `Check ${pod.name}'s weekly report card.`
-                    });
+                    if (m.userId) {
+                        const uid = (m.userId._id || m.userId).toString();
+                        emitToUser(io, uid, "notification:new", {
+                            title: "📊 Weekly Report Ready!",
+                            message: `Check ${pod.name}'s weekly report card.`
+                        });
+                    }
                 });
             }
         }
@@ -133,7 +139,9 @@ const runDailySummary = async (io) => {
         startOfToday.setHours(0, 0, 0, 0);
 
         for (const pod of pods) {
-            const memberIds = pod.members.map((m) => m.userId._id || m.userId);
+            const memberIds = pod.members
+                .map((m) => m.userId && (m.userId._id || m.userId))
+                .filter(Boolean);
             if (memberIds.length === 0) continue;
 
             const xpMap = await getMemberXPInRange(memberIds, startOfToday, now);
@@ -143,28 +151,34 @@ const runDailySummary = async (io) => {
             let topContributorName = "";
             let topXP = -1;
             pod.members.forEach((m) => {
-                const uid = (m.userId._id || m.userId).toString();
-                if ((xpMap[uid] || 0) > topXP) {
-                    topXP = xpMap[uid] || 0;
-                    topContributorName = m.userId?.name || "Someone";
+                if (m.userId) {
+                    const uid = (m.userId._id || m.userId).toString();
+                    if ((xpMap[uid] || 0) > topXP) {
+                        topXP = xpMap[uid] || 0;
+                        topContributorName = m.userId?.name || "Someone";
+                    }
                 }
             });
 
-            const notifications = pod.members.map((m) => ({
-                userId: m.userId._id || m.userId,
-                title: `🌙 ${pod.name} — Today's Summary`,
-                message: `Your pod earned ${totalTodayXP} XP today! 🔥 Top contributor: ${topContributorName}. Pod streak: ${pod.streak} days.`,
-                type: "pod",
-                read: false
-            }));
+            const notifications = pod.members
+                .filter((m) => m.userId)
+                .map((m) => ({
+                    userId: m.userId._id || m.userId,
+                    title: `🌙 ${pod.name} — Today's Summary`,
+                    message: `Your pod earned ${totalTodayXP} XP today! 🔥 Top contributor: ${topContributorName}. Pod streak: ${pod.streak} days.`,
+                    type: "pod",
+                    read: false
+                }));
             if (notifications.length > 0) {
                 await Notification.insertMany(notifications);
                 pod.members.forEach((m) => {
-                    const uid = (m.userId._id || m.userId).toString();
-                    emitToUser(io, uid, "notification:new", {
-                        title: `🌙 ${pod.name} Daily Summary`,
-                        message: `Pod earned ${totalTodayXP} XP today. Streak: ${pod.streak} days.`
-                    });
+                    if (m.userId) {
+                        const uid = (m.userId._id || m.userId).toString();
+                        emitToUser(io, uid, "notification:new", {
+                            title: `🌙 ${pod.name} Daily Summary`,
+                            message: `Pod earned ${totalTodayXP} XP today. Streak: ${pod.streak} days.`
+                        });
+                    }
                 });
             }
         }
@@ -218,8 +232,8 @@ const resolveExpiredRivalries = async (io) => {
 
             // Notify both pods
             const allMembers = [
-                ...challengerPod.members.map((m) => ({ userId: m.userId, podName: challengerPod.name })),
-                ...challengedPod.members.map((m) => ({ userId: m.userId, podName: challengedPod.name }))
+                ...challengerPod.members.filter((m) => m.userId).map((m) => ({ userId: m.userId, podName: challengerPod.name })),
+                ...challengedPod.members.filter((m) => m.userId).map((m) => ({ userId: m.userId, podName: challengedPod.name }))
             ];
 
             const notifications = allMembers.map((m) => ({
