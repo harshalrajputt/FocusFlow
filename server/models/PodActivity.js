@@ -14,7 +14,7 @@ const podActivitySchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ["completion", "miss", "recovery", "join", "challenge"],
+            enum: ["completion", "miss", "recovery", "join", "challenge", "sprint", "reaction"],
             required: true
         },
         message: {
@@ -24,7 +24,16 @@ const podActivitySchema = new mongoose.Schema(
         createdAt: {
             type: Date,
             default: Date.now
-        }
+        },
+
+        // Emoji reactions on completion-type activities
+        reactions: [
+            {
+                userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+                emoji: { type: String, enum: ["🔥", "👏", "💯", "🚀"], required: true },
+                createdAt: { type: Date, default: Date.now }
+            }
+        ]
     }
 );
 

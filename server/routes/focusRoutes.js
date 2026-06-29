@@ -7,6 +7,7 @@ const {
     logSession,
     getSessions,
     getSummary,
+    updatePresence
 } = require("../controllers/focusController");
 
 // All focus routes are protected
@@ -18,5 +19,7 @@ router.route("/")
 
 router.route("/summary")
     .get(getSummary);
+
+router.put("/presence", updatePresence);
 
 module.exports = router;

@@ -67,6 +67,26 @@ const podSchema = new mongoose.Schema(
                     required: true
                 }
             }
+        ],
+
+        // Pod Health Bar
+        healthScore: {
+            type: Number,
+            default: 100,
+            min: 0,
+            max: 100
+        },
+        lastHealthDecay: {
+            type: Date,
+            default: Date.now
+        },
+
+        // Badges won from rival battles
+        badges: [
+            {
+                type: { type: String },
+                earnedAt: { type: Date, default: Date.now }
+            }
         ]
     },
     {

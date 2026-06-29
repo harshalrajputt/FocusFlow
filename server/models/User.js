@@ -77,6 +77,16 @@ const userSchema = new mongoose.Schema(
         lastActiveDate: {
             type: String,
             default: ""
+        },
+
+        // Real-time presence (cleared when session ends)
+        activeSessionStart: {
+            type: Date,
+            default: null
+        },
+        activeTaskLabel: {
+            type: String,
+            default: ""
         }
     },
     {

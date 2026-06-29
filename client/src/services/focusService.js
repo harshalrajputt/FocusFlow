@@ -17,3 +17,8 @@ API.interceptors.request.use((config) => {
 export const logFocusSession  = (data)   => API.post("/focus", data);
 export const getFocusSessions = (params) => API.get("/focus", { params });
 export const getFocusSummary  = ()       => API.get("/focus/summary");
+
+// ─── Real-time Presence ───────────────────────────────────────────────────────
+// active: boolean, taskLabel: string (shown to pod members)
+export const updatePresence = (active, taskLabel = "") =>
+    API.put("/focus/presence", { active, taskLabel });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     getUserPods,
     getPodDetails,
@@ -8,9 +8,18 @@ import {
     respondToInvite,
     leavePod,
     sendNudge,
-    createChallenge
+    createChallenge,
+    reactToActivity,
+    getWeeklyReport,
+    startSprint,
+    joinSprint,
+    getActiveSprint,
+    challengeRival,
+    respondToRivalChallenge,
+    getRivalryStatus
 } from "../services/podService";
 import { searchUsers } from "../services/authService";
+import { useSocket } from "../context/SocketContext";
 
 const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 const inputStyle = {
@@ -48,12 +57,18 @@ function Toast({ toast }) {
 }
 
 export default function Pods() {
+    const socket = useSocket();
     const [pods, setPods] = useState([]);
     const [selectedPodId, setSelectedPodId] = useState("");
     const [podDetails, setPodDetails] = useState(null);
     const [activityFeed, setActivityFeed] = useState([]);
     const [pendingInvites, setPendingInvites] = useState([]);
-    
+    const [activeSprint, setActiveSprint] = useState(null);
+    const [activeRivalry, setActiveRivalry] = useState(null);
+    const [weeklyReport, setWeeklyReport] = useState(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("feed"); // feed | report
+
     const [loading, setLoading] = useState(true);
     const [podLoading, setPodLoading] = useState(false);
     const [toast, setToast] = useState(null);
@@ -75,6 +90,19 @@ export default function Pods() {
     const [challengeTarget, setChallengeTarget] = useState("");
     const [challengeDate, setChallengeDate] = useState("");
     const [challengeLoading, setChallengeLoading] = useState(false);
+
+    // Sprint modal
+    const [sprintOpen, setSprintOpen] = useState(false);
+    const [sprintDuration, setSprintDuration] = useState(30);
+    const [sprintLoading, setSprintLoading] = useState(false);
+
+    // Rivalry
+    const [rivalOpen, setRivalOpen] = useState(false);
+    const [rivalPodId, setRivalPodId] = useState("");
+    const [rivalLoading, setRivalLoading] = useState(false);
+
+    // Track reactions locally for optimistic updates
+    const [localReactions, setLocalReactions] = useState({}); // { activityId: [{userId, emoji}] }
 
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -119,6 +147,14 @@ export default function Pods() {
             const res = await getPodDetails(podId);
             setPodDetails(res.data.pod);
             setActivityFeed(res.data.activityFeed || []);
+            setActiveSprint(res.data.activeSprint || null);
+            setActiveRivalry(res.data.activeRivalry || null);
+            // Seed local reactions from feed
+            const reactionMap = {};
+            (res.data.activityFeed || []).forEach(a => {
+                reactionMap[a._id] = a.reactions || [];
+            });
+            setLocalReactions(reactionMap);
         } catch (err) {
             console.error("Error loading pod details:", err);
             showToast("Failed to load pod info.", "error");
@@ -126,6 +162,72 @@ export default function Pods() {
             setPodLoading(false);
         }
     }, []);
+
+    // ── Socket.io real-time listeners ──────────────────────────────────────────
+    useEffect(() => {
+        if (!socket) return;
+
+        const onPresence = ({ userId, activeSessionStart, activeTaskLabel }) => {
+            setPodDetails(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    members: prev.members.map(m => {
+                        const uid = m.userId?._id || m.userId;
+                        if (uid?.toString() === userId?.toString()) {
+                            return {
+                                ...m,
+                                userId: { ...m.userId, activeSessionStart, activeTaskLabel }
+                            };
+                        }
+                        return m;
+                    })
+                };
+            });
+        };
+
+        const onReaction = ({ activityId, reactions }) => {
+            setLocalReactions(prev => ({ ...prev, [activityId]: reactions }));
+        };
+
+        const onSprintUpdate = ({ sprint, ended }) => {
+            if (ended) {
+                setActiveSprint(null);
+                fetchPodDetails(selectedPodId); // refresh feed for sprint result
+            } else {
+                setActiveSprint(sprint);
+            }
+        };
+
+        const onHealthUpdate = ({ podId, healthScore }) => {
+            if (podId?.toString() === selectedPodId) {
+                setPodDetails(prev => prev ? { ...prev, healthScore } : prev);
+            }
+        };
+
+        const onRivalryUpdate = (data) => {
+            if (data.rivalry) {
+                setActiveRivalry(data.rivalry);
+            } else {
+                // Partial update (XP only)
+                setActiveRivalry(prev => prev ? { ...prev, ...data } : prev);
+            }
+        };
+
+        socket.on("presence:update", onPresence);
+        socket.on("session:reaction", onReaction);
+        socket.on("sprint:update", onSprintUpdate);
+        socket.on("pod:health:update", onHealthUpdate);
+        socket.on("rivalry:update", onRivalryUpdate);
+
+        return () => {
+            socket.off("presence:update", onPresence);
+            socket.off("session:reaction", onReaction);
+            socket.off("sprint:update", onSprintUpdate);
+            socket.off("pod:health:update", onHealthUpdate);
+            socket.off("rivalry:update", onRivalryUpdate);
+        };
+    }, [socket, selectedPodId, fetchPodDetails]);
 
     useEffect(() => {
         fetchInitialData();
@@ -257,22 +359,135 @@ export default function Pods() {
     // Calculate challenge percentages
     const getChallengeProgressPercent = (challenge) => {
         let total = 0;
-        // Since challenge.progress is a Mongoose Map, it will be received as a JS Object in Axios response
         const progressObj = challenge.progress || {};
-        Object.values(progressObj).forEach(val => {
-            total += val;
-        });
+        Object.values(progressObj).forEach(val => { total += val; });
         return Math.min(Math.round((total / challenge.targetXP) * 100), 100);
     };
 
     const getChallengeTotalXP = (challenge) => {
         let total = 0;
         const progressObj = challenge.progress || {};
-        Object.values(progressObj).forEach(val => {
-            total += val;
-        });
+        Object.values(progressObj).forEach(val => { total += val; });
         return total;
     };
+
+    // ── Session Reactions ──────────────────────────────────────────────────────
+    const handleReact = async (activityId, emoji) => {
+        const current = (localReactions[activityId] || []);
+        const myReaction = current.find(r => r.userId?.toString() === currentUser._id?.toString());
+        const isToggle = myReaction?.emoji === emoji;
+
+        // Optimistic update
+        setLocalReactions(prev => {
+            const filtered = (prev[activityId] || []).filter(r => r.userId?.toString() !== currentUser._id?.toString());
+            if (!isToggle) {
+                filtered.push({ userId: currentUser._id, emoji });
+            }
+            return { ...prev, [activityId]: filtered };
+        });
+
+        try {
+            await reactToActivity(selectedPodId, activityId, emoji, isToggle);
+        } catch (err) {
+            // Revert on error
+            setLocalReactions(prev => ({ ...prev, [activityId]: current }));
+            showToast("Failed to react.", "error");
+        }
+    };
+
+    // ── Weekly Report ──────────────────────────────────────────────────────────
+    const handleLoadReport = async () => {
+        if (!selectedPodId) return;
+        setReportLoading(true);
+        try {
+            const res = await getWeeklyReport(selectedPodId);
+            setWeeklyReport(res.data.report);
+        } catch (err) {
+            showToast("Failed to load weekly report.", "error");
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "report" && selectedPodId && !weeklyReport) {
+            handleLoadReport();
+        }
+    }, [activeTab, selectedPodId]);
+
+    // ── Group Sprint Rooms ─────────────────────────────────────────────────────
+    const handleStartSprint = async (e) => {
+        e.preventDefault();
+        setSprintLoading(true);
+        try {
+            const res = await startSprint(selectedPodId, sprintDuration);
+            setActiveSprint(res.data.sprint);
+            setSprintOpen(false);
+            showToast(`⚡ ${sprintDuration}-min sprint started! Members notified.`);
+        } catch (err) {
+            showToast(err.response?.data?.message || "Failed to start sprint.", "error");
+        } finally {
+            setSprintLoading(false);
+        }
+    };
+
+    const handleJoinSprint = async () => {
+        if (!activeSprint) return;
+        try {
+            const res = await joinSprint(selectedPodId, activeSprint._id);
+            setActiveSprint(res.data.sprint);
+            showToast("You joined the sprint! 💪");
+        } catch (err) {
+            showToast(err.response?.data?.message || "Failed to join sprint.", "error");
+        }
+    };
+
+    // ── Rival Pods ─────────────────────────────────────────────────────────────
+    const handleChallengeRival = async (e) => {
+        e.preventDefault();
+        if (!rivalPodId.trim()) return;
+        setRivalLoading(true);
+        try {
+            await challengeRival(selectedPodId, rivalPodId.trim());
+            setRivalOpen(false);
+            setRivalPodId("");
+            showToast("⚔️ Challenge sent! Waiting for their response.");
+        } catch (err) {
+            showToast(err.response?.data?.message || "Failed to send challenge.", "error");
+        } finally {
+            setRivalLoading(false);
+        }
+    };
+
+    const handleRespondRivalry = async (rivalryId, accept) => {
+        try {
+            await respondToRivalChallenge(rivalryId, accept);
+            fetchPodDetails(selectedPodId);
+            showToast(accept ? "⚔️ Rivalry accepted! The battle begins!" : "Challenge declined.");
+        } catch (err) {
+            showToast(err.response?.data?.message || "Failed to respond.", "error");
+        }
+    };
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    const getHealthBarColor = (score) => {
+        if (score >= 80) return { color: '#22c55e', glow: 'rgba(34,197,94,0.3)', label: 'Thriving 🟢' };
+        if (score >= 40) return { color: '#f59e0b', glow: 'rgba(245,158,11,0.3)', label: 'Slowing Down 🟡' };
+        return { color: '#ef4444', glow: 'rgba(239,68,68,0.4)', label: 'Critical 🔴' };
+    };
+
+    const getSprintTimeLeft = (sprint) => {
+        if (!sprint) return "—";
+        const endTime = new Date(sprint.endTime);
+        const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+        const m = Math.floor(remaining / 60).toString().padStart(2, "0");
+        const s = (remaining % 60).toString().padStart(2, "0");
+        return `${m}:${s}`;
+    };
+
+    const isInSprint = activeSprint?.participants?.some(
+        p => (p.userId?._id || p.userId)?.toString() === currentUser._id?.toString()
+    );
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in">
@@ -411,6 +626,12 @@ export default function Pods() {
                                             {podDetails.description && (
                                                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{podDetails.description}</p>
                                             )}
+                                            <p className="text-[10px] text-slate-400 font-mono mt-1.5 select-all cursor-pointer inline-flex items-center gap-1 bg-[var(--bg-primary)] px-2 py-0.5 rounded border border-[var(--border-color)] hover:border-sky-400 transition" title="Click to copy Pod ID" onClick={() => {
+                                                navigator.clipboard.writeText(podDetails._id);
+                                                showToast("Pod ID copied to clipboard!");
+                                            }}>
+                                                ID: {podDetails._id} 📋
+                                            </p>
                                             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-2.5">
                                                 Leader: <span className="text-slate-500 font-bold">{podDetails.leaderId?.name || "Unknown"}</span>
                                             </p>
@@ -424,32 +645,127 @@ export default function Pods() {
                                         </button>
                                     </div>
 
-                                    {/* Stats Strip */}
-                                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[var(--border-color)]">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-950/20 flex items-center justify-center text-orange-500">
-                                                🔥
+                                    {/* Pod Health Bar */}
+                                    {(() => {
+                                        const health = podDetails.healthScore ?? 100;
+                                        const hc = getHealthBarColor(health);
+                                        return (
+                                            <div className="pt-3 border-t border-[var(--border-color)] space-y-2">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                                        <span>❤️</span> Pod Health
+                                                    </span>
+                                                    <span className="font-bold" style={{ color: hc.color }}>{hc.label} · {health}%</span>
+                                                </div>
+                                                <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-700"
+                                                        style={{ width: `${health}%`, background: hc.color, boxShadow: `0 0 8px ${hc.glow}` }}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                                                    <span>🔥 Streak: {podDetails.streak} days</span>
+                                                    <span>👥 {podDetails.members?.length || 0} members</span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs text-slate-400">Pod Streak</p>
-                                                <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
-                                                    {podDetails.streak} {podDetails.streak === 1 ? 'day' : 'days'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950/20 flex items-center justify-center text-sky-500">
-                                                🌟
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-slate-400">Total Members</p>
-                                                <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
-                                                    {podDetails.members?.length || 0} / 4
-                                                </p>
-                                            </div>
-                                        </div>
+                                        );
+                                    })()}
+
+                                    {/* Action Buttons Row */}
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        <button
+                                            onClick={() => setInviteOpen(true)}
+                                            className="flex-1 min-w-[120px] py-2 rounded-xl text-xs font-bold border border-[var(--border-color)] text-slate-600 dark:text-slate-300 hover:border-sky-400 hover:text-sky-500 transition cursor-pointer bg-[var(--bg-primary)]"
+                                        >
+                                            ✉️ Invite
+                                        </button>
+                                        <button
+                                            onClick={() => setSprintOpen(true)}
+                                            className="flex-1 min-w-[120px] py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+                                            style={{ background: 'linear-gradient(135deg, #0ea5e9, #0d9488)', color: '#fff' }}
+                                        >
+                                            ⚡ Start Sprint
+                                        </button>
+                                        {podDetails.leaderId?._id?.toString() === currentUser._id?.toString() && (
+                                            <button
+                                                onClick={() => setRivalOpen(true)}
+                                                className="flex-1 min-w-[120px] py-2 rounded-xl text-xs font-bold border border-orange-400/40 text-orange-500 hover:bg-orange-500/10 transition cursor-pointer"
+                                            >
+                                                ⚔️ Challenge Rival
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* Active Sprint Room Banner */}
+                                {activeSprint && (
+                                    <div className="rounded-2xl p-5 space-y-4 border" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.08), rgba(13,148,136,0.08))', borderColor: 'rgba(14,165,233,0.3)' }}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xl">⚡</span>
+                                                <div>
+                                                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">{activeSprint.duration}-min Group Sprint</p>
+                                                    <p className="text-xs text-slate-400">Started by {activeSprint.startedBy?.name}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-mono text-2xl font-extrabold" style={{ color: '#0ea5e9' }}>{getSprintTimeLeft(activeSprint)}</p>
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-wider">time left</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {activeSprint.participants?.map(p => (
+                                                <div key={p.userId?._id || p.userId} className="relative" title={p.userId?.name || "Member"}>
+                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden" style={{ background: 'var(--accent-glow)', color: 'var(--accent-color)', border: '2px solid var(--accent-color)' }}>
+                                                        {p.userId?.profilePicture ? <img src={p.userId.profilePicture} alt="" className="w-full h-full object-cover" /> : (p.userId?.name?.slice(0, 2).toUpperCase() || '?')}
+                                                    </div>
+                                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--bg-secondary)]"></div>
+                                                </div>
+                                            ))}
+                                            {!isInSprint && (
+                                                <button
+                                                    onClick={handleJoinSprint}
+                                                    className="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer"
+                                                    style={{ background: '#0ea5e9' }}
+                                                >
+                                                    Join Sprint
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Rivalry Banner */}
+                                {activeRivalry && (() => {
+                                    const isChallenger = activeRivalry.challengerPodId?._id === selectedPodId || activeRivalry.challengerPodId === selectedPodId;
+                                    const myXP = isChallenger ? activeRivalry.challengerXP : activeRivalry.challengedXP;
+                                    const theirXP = isChallenger ? activeRivalry.challengedXP : activeRivalry.challengerXP;
+                                    const rivalName = isChallenger ? activeRivalry.challengedPodId?.name : activeRivalry.challengerPodId?.name;
+                                    const totalXP = myXP + theirXP || 1;
+                                    const myPct = Math.round((myXP / totalXP) * 100);
+                                    const daysLeft = activeRivalry.endDate ? Math.max(0, Math.ceil((new Date(activeRivalry.endDate) - Date.now()) / 86400000)) : 7;
+                                    return (
+                                        <div className="rounded-2xl p-5 space-y-3 border" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(239,68,68,0.06))', borderColor: 'rgba(249,115,22,0.3)' }}>
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-extrabold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">⚔️ Rival Battle <span className="text-orange-400">LIVE</span></p>
+                                                <p className="text-xs text-slate-400">{daysLeft} days left</p>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-sm font-bold">
+                                                <span className="text-sky-500">{podDetails.name}</span>
+                                                <span className="text-slate-400 text-xs">VS</span>
+                                                <span className="text-orange-500">{rivalName}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-xs text-slate-400">
+                                                    <span>{myXP} XP</span><span>{theirXP} XP</span>
+                                                </div>
+                                                <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(239,68,68,0.2)' }}>
+                                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${myPct}%`, background: 'linear-gradient(90deg, #0ea5e9, #0d9488)' }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Active Challenges */}
                                 <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
@@ -498,53 +814,185 @@ export default function Pods() {
                                     )}
                                 </div>
 
-                                {/* Activity Feed */}
+                                {/* Social Feed / Weekly Report Tabs */}
                                 <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
-                                    <h3 className="font-bold text-sm text-slate-850 dark:text-slate-200">Social Feed</h3>
+                                    <div className="flex border-b border-[var(--border-color)] pb-1">
+                                        <button
+                                            onClick={() => setActiveTab("feed")}
+                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                                                activeTab === "feed"
+                                                    ? "border-sky-505 text-sky-500 border-sky-500 font-extrabold"
+                                                    : "border-transparent text-slate-400 hover:text-slate-200"
+                                            }`}
+                                        >
+                                            Social Feed
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab("report");
+                                                handleLoadReport();
+                                            }}
+                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                                                activeTab === "report"
+                                                    ? "border-sky-505 text-sky-500 border-sky-500 font-extrabold"
+                                                    : "border-transparent text-slate-400 hover:text-slate-200"
+                                            }`}
+                                        >
+                                            Weekly Report Card
+                                        </button>
+                                    </div>
                                     
-                                    {activityFeed.length === 0 ? (
-                                        <p className="text-xs text-slate-400 text-center py-6">No recent pod activities yet. Hit those books!</p>
-                                    ) : (
-                                        <div className="space-y-4 relative pl-4 border-l border-[var(--border-color)]">
-                                            {activityFeed.map((activity) => {
-                                                const iconMap = {
-                                                    join: '👋',
-                                                    completion: '🎉',
-                                                    miss: '⚠️',
-                                                    recovery: '💪',
-                                                    challenge: '🚀'
-                                                };
-                                                const bulletColorMap = {
-                                                    join: 'bg-emerald-500/10 border-emerald-500 text-emerald-500',
-                                                    completion: 'bg-sky-500/10 border-sky-500 text-sky-500',
-                                                    miss: 'bg-rose-500/10 border-rose-500 text-rose-500',
-                                                    recovery: 'bg-teal-500/10 border-teal-500 text-teal-500',
-                                                    challenge: 'bg-purple-500/10 border-purple-500 text-purple-500'
-                                                };
-                                                const itemColor = bulletColorMap[activity.type] || 'bg-slate-500/10 border-slate-500 text-slate-500';
+                                    {activeTab === "feed" ? (
+                                        activityFeed.length === 0 ? (
+                                            <p className="text-xs text-slate-400 text-center py-6">No recent pod activities yet. Hit those books!</p>
+                                        ) : (
+                                            <div className="space-y-4 relative pl-4 border-l border-[var(--border-color)]">
+                                                {activityFeed.map((activity) => {
+                                                    const iconMap = {
+                                                        join: '👋',
+                                                        completion: '🎉',
+                                                        miss: '⚠️',
+                                                        recovery: '💪',
+                                                        challenge: '🚀',
+                                                        sprint: '⚡',
+                                                        reaction: '❤️'
+                                                    };
+                                                    const bulletColorMap = {
+                                                        join: 'bg-emerald-500/10 border-emerald-500 text-emerald-500',
+                                                        completion: 'bg-sky-500/10 border-sky-500 text-sky-500',
+                                                        miss: 'bg-rose-500/10 border-rose-500 text-rose-500',
+                                                        recovery: 'bg-teal-500/10 border-teal-500 text-teal-500',
+                                                        challenge: 'bg-purple-500/10 border-purple-500 text-purple-500',
+                                                        sprint: 'bg-yellow-500/10 border-yellow-500 text-yellow-600',
+                                                        reaction: 'bg-pink-500/10 border-pink-500 text-pink-500'
+                                                    };
+                                                    const itemColor = bulletColorMap[activity.type] || 'bg-slate-500/10 border-slate-500 text-slate-500';
+                                                    const reactions = localReactions[activity._id] || [];
+                                                    const EMOJIS = ['🔥', '👏', '💯', '🚀'];
 
-                                                return (
-                                                    <div key={activity._id} className="relative group space-y-0.5">
-                                                        {/* Timeline bullet */}
-                                                        <div
-                                                            className={`absolute -left-[25px] top-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] ${itemColor}`}
-                                                            style={{ transform: 'translateX(-50%)' }}
-                                                        >
-                                                            {iconMap[activity.type] || '•'}
+                                                    return (
+                                                        <div key={activity._id} className="relative group space-y-1.5">
+                                                            {/* Timeline bullet */}
+                                                            <div
+                                                                className={`absolute -left-[25px] top-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] ${itemColor}`}
+                                                                style={{ transform: 'translateX(-50%)' }}
+                                                            >
+                                                                {iconMap[activity.type] || '•'}
+                                                            </div>
+                                                            
+                                                            <div className="flex justify-between items-start gap-4">
+                                                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                                                                    {activity.message}
+                                                                </p>
+                                                                <span className="text-[9px] text-slate-400 flex-shrink-0">
+                                                                    {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Emoji Reactions — only on completion type */}
+                                                            {activity.type === 'completion' && (
+                                                                <div className="flex items-center gap-1.5 mt-1">
+                                                                    {EMOJIS.map(emoji => {
+                                                                        const myReaction = reactions.find(r => r.userId?.toString() === currentUser._id?.toString());
+                                                                        const isActive = myReaction?.emoji === emoji;
+                                                                        const count = reactions.filter(r => r.emoji === emoji).length;
+                                                                        return (
+                                                                            <button
+                                                                                key={emoji}
+                                                                                onClick={() => handleReact(activity._id, emoji)}
+                                                                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-xs transition cursor-pointer"
+                                                                                style={{
+                                                                                    background: isActive ? 'var(--accent-glow)' : 'var(--bg-primary)',
+                                                                                    border: `1px solid ${isActive ? 'var(--accent-color)' : 'var(--border-color)'}`,
+                                                                                    opacity: activity.userId?._id?.toString() === currentUser._id?.toString() ? 0.4 : 1
+                                                                                }}
+                                                                                disabled={activity.userId?._id?.toString() === currentUser._id?.toString()}
+                                                                                title={activity.userId?._id?.toString() === currentUser._id?.toString() ? "Can't react to your own session" : `React with ${emoji}`}
+                                                                            >
+                                                                                <span>{emoji}</span>
+                                                                                {count > 0 && <span className="text-[9px] font-bold text-slate-500">{count}</span>}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        
-                                                        <div className="flex justify-between items-start gap-4">
-                                                            <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                                                                {activity.message}
-                                                            </p>
-                                                            <span className="text-[9px] text-slate-400 flex-shrink-0">
-                                                                {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        )
+                                    ) : (
+                                        /* Weekly Report Card UI */
+                                        reportLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-10 gap-3">
+                                                <svg className="animate-spin-slow w-6 h-6 text-sky-500" viewBox="0 0 24 24" fill="none">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                </svg>
+                                                <p className="text-slate-400 text-xs">Generating report...</p>
+                                            </div>
+                                        ) : weeklyReport ? (
+                                            <div className="space-y-5">
+                                                {/* Header Stats */}
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/10 text-center">
+                                                        <p className="text-[10px] text-slate-450 uppercase font-semibold">Weekly Pod XP</p>
+                                                        <p className="text-lg font-extrabold text-sky-500">{weeklyReport.totalPodXP} XP</p>
+                                                    </div>
+                                                    <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-center">
+                                                        <p className="text-[10px] text-slate-450 uppercase font-semibold">Pod Streak</p>
+                                                        <p className="text-lg font-extrabold text-orange-500">{weeklyReport.podStreak} days</p>
+                                                    </div>
+                                                    <div className="p-3 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
+                                                        <p className="text-[10px] text-slate-450 uppercase font-semibold">Health Score</p>
+                                                        <p className="text-lg font-extrabold text-green-500">{weeklyReport.healthScore}%</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* MVP Spotlight */}
+                                                {weeklyReport.mvp?.user && (
+                                                    <div className="p-4 rounded-xl border border-yellow-500/25 bg-gradient-to-r from-yellow-500/5 to-amber-500/5 flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-2xl">🏆</span>
+                                                            <div>
+                                                                <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider">Weekly MVP Spotlight</p>
+                                                                <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">{weeklyReport.mvp.user.name}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-slate-400">Contribution</p>
+                                                            <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">+{weeklyReport.mvp.xp} XP</p>
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                )}
+
+                                                {/* Member Breakdown Table */}
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Member Contributions</p>
+                                                    <div className="space-y-2">
+                                                        {weeklyReport.members?.map(m => {
+                                                            const u = m.user || {};
+                                                            return (
+                                                                <div key={u._id} className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)]">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 text-slate-700 text-xs font-bold overflow-hidden">
+                                                                            {u.profilePicture ? <img src={u.profilePicture} alt="" className="w-full h-full object-cover" /> : (u.name?.slice(0, 2).toUpperCase() || "?")}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{u.name}</p>
+                                                                            <p className="text-[10px] text-slate-400">Consistency: {m.daysActive}/7 days active</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className="text-xs font-extrabold text-emerald-500">+{m.xpEarned} XP</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-400 text-center py-6">Failed to load weekly report.</p>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -584,11 +1032,16 @@ export default function Pods() {
                                                         </span>
                                                         
                                                         {/* Avatar */}
-                                                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold overflow-hidden flex-shrink-0">
-                                                            {u.profilePicture ? (
-                                                                <img src={u.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                u.name?.slice(0, 2).toUpperCase() || "U"
+                                                        <div className="relative">
+                                                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold overflow-hidden flex-shrink-0">
+                                                                {u.profilePicture ? (
+                                                                    <img src={u.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    u.name?.slice(0, 2).toUpperCase() || "U"
+                                                                )}
+                                                            </div>
+                                                            {u.activeSessionStart && (
+                                                                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border border-[var(--bg-secondary)]" title="Studying now!" />
                                                             )}
                                                         </div>
 
@@ -597,9 +1050,15 @@ export default function Pods() {
                                                             <p className={`text-xs font-bold truncate ${isMe ? 'text-sky-600 dark:text-sky-400' : 'text-slate-800 dark:text-slate-200'}`}>
                                                                 {u.name} {isMe && "(You)"}
                                                             </p>
-                                                            <p className="text-[10px] text-slate-400 mt-0.5">
-                                                                🔥 {u.streak || 0} day streak
-                                                            </p>
+                                                            {u.activeSessionStart ? (
+                                                                <p className="text-[10px] text-green-500 font-semibold animate-pulse mt-0.5">
+                                                                    ✍️ studying {u.activeTaskLabel ? `"${u.activeTaskLabel}"` : "now"}
+                                                                </p>
+                                                            ) : (
+                                                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                                                    🔥 {u.streak || 0} day streak
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -868,6 +1327,108 @@ export default function Pods() {
                     </div>
                 </div>
             )}
+
+            {/* GROUP SPRINT MODAL */}
+            {sprintOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md p-6 rounded-2xl animate-fade-in-up" style={cardStyle}>
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Start Group Sprint</h3>
+                            <button
+                                onClick={() => setSprintOpen(false)}
+                                className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleStartSprint} className="space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Duration (Minutes) *</label>
+                                <select
+                                    value={sprintDuration}
+                                    onChange={(e) => setSprintDuration(Number(e.target.value))}
+                                    style={inputStyle}
+                                >
+                                    <option value={30}>30 Minutes</option>
+                                    <option value={45}>45 Minutes</option>
+                                    <option value={60}>60 Minutes</option>
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setSprintOpen(false)}
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border-color)] bg-[var(--bg-primary)] text-slate-500 hover:text-slate-700 dark:hover:text-slate-355 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={sprintLoading}
+                                    className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold cursor-pointer transition"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #0ea5e9, #0d9488)',
+                                        opacity: sprintLoading ? 0.6 : 1,
+                                    }}
+                                >
+                                    {sprintLoading ? "Starting..." : "Start Sprint ⚡"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* CHALLENGE RIVAL MODAL */}
+            {rivalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md p-6 rounded-2xl animate-fade-in-up" style={cardStyle}>
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Challenge a Rival Pod</h3>
+                            <button
+                                onClick={() => setRivalOpen(false)}
+                                className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleChallengeRival} className="space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2">Rival Pod ID *</label>
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="Enter Pod ID of the rival pod..."
+                                    value={rivalPodId}
+                                    onChange={(e) => setRivalPodId(e.target.value)}
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setRivalOpen(false)}
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border-color)] bg-[var(--bg-primary)] text-slate-500 hover:text-slate-700 dark:hover:text-slate-355 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={rivalLoading || !rivalPodId.trim()}
+                                    className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold cursor-pointer transition"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #f97316, #ef4444)',
+                                        opacity: rivalLoading || !rivalPodId.trim() ? 0.6 : 1,
+                                    }}
+                                >
+                                    {rivalLoading ? "Sending Challenge..." : "Send Challenge ⚔️"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
 
             <Toast toast={toast} />
         </div>

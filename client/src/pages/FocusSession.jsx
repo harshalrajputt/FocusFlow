@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { logFocusSession, getFocusSummary } from "../services/focusService";
+import { logFocusSession, getFocusSummary, updatePresence } from "../services/focusService";
 import { getTasks } from "../services/taskService";
 import Timer3DVisual from "../components/layout/Timer3DVisual";
 
@@ -358,6 +358,12 @@ const FocusSession = () => {
     const handlePlayPause = () => {
         if (!running) {
             setCompleted(false);
+            // Announce to pod members that a focus session is starting
+            if (MODES[modeIdx].label === "Focus") {
+                const task = tasks.find(t => t._id === selectedTaskId);
+                const label = task?.shareWithPod !== false ? (task?.title || "") : "";
+                updatePresence(true, label).catch(() => {});
+            }
         }
         if (running) {
             setPauseCount(prev => prev + 1);
@@ -387,6 +393,8 @@ const FocusSession = () => {
             setInterruptions(0);
         }
         setRunning(false);
+        // Clear presence on manual reset
+        updatePresence(false).catch(() => {});
     };
 
     const handleSkip = () => {

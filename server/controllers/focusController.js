@@ -3,8 +3,10 @@ const FocusSession = require("../models/FocusSession");
 const User = require("../models/User");
 const Pod = require("../models/Pod");
 const PodActivity = require("../models/PodActivity");
+const PodRivalry = require("../models/PodRivalry");
 const Notification = require("../models/Notification");
 const Task = require("../models/Task");
+const { emitToPod, emitToUser } = require("../socket/socketHandler");
 
 // ─── LOG focus session ────────────────────────────────────────────────────────
 const logSession = async (req, res) => {
@@ -128,7 +130,11 @@ const logSession = async (req, res) => {
                             });
                         }
 
-                        // 2. Check and update Pod Streak
+                        // 2. Replenish Pod Health
+                        const REPLENISH = 20;
+                        pod.healthScore = Math.min(100, (pod.healthScore ?? 100) + REPLENISH);
+
+                        // 3. Check and update Pod Streak
                         const todayStr = new Date().toLocaleDateString("en-CA");
                         if (pod.lastActiveDate !== todayStr) {
                             const memberIds = pod.members.map(m => m.userId);
@@ -160,7 +166,43 @@ const logSession = async (req, res) => {
 
                         await pod.save();
 
-                        // 3. Log activity feed message (privacy-aware)
+                        // Emit real-time health update
+                        emitToPod(req.io, pod._id.toString(), "pod:health:update", {
+                            podId: pod._id,
+                            healthScore: pod.healthScore
+                        });
+
+                        // 4. Accumulate XP toward any active Rivalry
+                        if (xpEarned > 0) {
+                            const activeRivalry = await PodRivalry.findOne({
+                                $or: [
+                                    { challengerPodId: pod._id, status: "active" },
+                                    { challengedPodId: pod._id, status: "active" }
+                                ]
+                            });
+                            if (activeRivalry) {
+                                const isChallenger = activeRivalry.challengerPodId.toString() === pod._id.toString();
+                                if (isChallenger) {
+                                    activeRivalry.challengerXP += xpEarned;
+                                } else {
+                                    activeRivalry.challengedXP += xpEarned;
+                                }
+                                await activeRivalry.save();
+                                // Emit rivalry XP update to both pod rooms
+                                emitToPod(req.io, activeRivalry.challengerPodId.toString(), "rivalry:update", {
+                                    rivalryId: activeRivalry._id,
+                                    challengerXP: activeRivalry.challengerXP,
+                                    challengedXP: activeRivalry.challengedXP
+                                });
+                                emitToPod(req.io, activeRivalry.challengedPodId.toString(), "rivalry:update", {
+                                    rivalryId: activeRivalry._id,
+                                    challengerXP: activeRivalry.challengerXP,
+                                    challengedXP: activeRivalry.challengedXP
+                                });
+                            }
+                        }
+
+                        // 5. Log activity feed message (privacy-aware)
                         let taskDetail = "a task";
                         let share = true;
                         if (taskId) {
@@ -185,7 +227,7 @@ const logSession = async (req, res) => {
                         });
                         await act.save();
 
-                        // 4. Send notifications to other pod members
+                        // 5. Send notifications to other pod members
                         const otherMembers = pod.members.filter(m => m.userId.toString() !== req.user.id);
                         const notifications = otherMembers.map(m => ({
                             userId: m.userId,
@@ -203,6 +245,24 @@ const logSession = async (req, res) => {
                 }
             } catch (podErr) {
                 console.error("Error in FocusSocialPod gamification hook:", podErr);
+            }
+
+            // Clear presence once a Focus session is logged (completed or not)
+            try {
+                const userPods = await Pod.find({ "members.userId": req.user.id }).select("_id");
+                await User.findByIdAndUpdate(req.user.id, {
+                    activeSessionStart: null,
+                    activeTaskLabel: ""
+                });
+                userPods.forEach(pod => {
+                    emitToPod(req.io, pod._id.toString(), "presence:update", {
+                        userId: req.user.id,
+                        activeSessionStart: null,
+                        activeTaskLabel: ""
+                    });
+                });
+            } catch (presenceErr) {
+                console.error("Error clearing presence:", presenceErr);
             }
         }
 
@@ -353,8 +413,37 @@ const getSummary = async (req, res) => {
     }
 };
 
+// ─── UPDATE Presence (called when timer starts/is abandoned without completing) ─
+const updatePresence = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { active, taskLabel } = req.body;
+
+        const update = active
+            ? { activeSessionStart: new Date(), activeTaskLabel: taskLabel || "" }
+            : { activeSessionStart: null, activeTaskLabel: "" };
+
+        await User.findByIdAndUpdate(userId, update);
+
+        // Emit presence to all pod rooms the user belongs to
+        const userPods = await Pod.find({ "members.userId": userId }).select("_id");
+        userPods.forEach(pod => {
+            emitToPod(req.io, pod._id.toString(), "presence:update", {
+                userId,
+                activeSessionStart: active ? update.activeSessionStart : null,
+                activeTaskLabel: update.activeTaskLabel
+            });
+        });
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error updating presence." });
+    }
+};
+
 module.exports = {
     logSession,
     getSessions,
     getSummary,
+    updatePresence,
 };

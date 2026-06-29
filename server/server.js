@@ -1,10 +1,13 @@
 require("dotenv").config();
 
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const path = require("path");
+const { Server } = require("socket.io");
 
 const connectDB = require("./config/db");
+const { initSocket } = require("./socket/socketHandler");
 
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
@@ -18,6 +21,24 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const podRoutes = require("./routes/podRoutes");
 
 const app = express();
+const httpServer = http.createServer(app);
+
+// Socket.io attached to the same HTTP server
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+// Make `io` accessible to route controllers via req.io
+app.use((req, _res, next) => {
+    req.io = io;
+    next();
+});
+
+// Initialise socket rooms and event listeners
+initSocket(io);
 
 connectDB();
 
@@ -46,8 +67,12 @@ app.use("/api/website-usage", websiteUsageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pods", podRoutes);
 
+// Register cron jobs
+require("./jobs/podHealthJob")(io);
+require("./jobs/weeklyReportJob")(io);
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (with Socket.io)`);
 });
