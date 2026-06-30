@@ -90,6 +90,25 @@ const getPodDetails = async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(30);
 
+        // Auto-end expired sprints
+        const now = new Date();
+        const expiredSprints = await PodSprint.find({ podId, status: "active", endTime: { $lte: now } });
+        for (const s of expiredSprints) {
+            s.status = "ended";
+            for (const p of s.participants) {
+                p.xpEarned = 15;
+                await User.findByIdAndUpdate(p.userId, { $inc: { xp: 15 } });
+            }
+            await s.save();
+            await PodActivity.create({
+                podId,
+                userId: s.startedBy,
+                type: "sprint",
+                message: `⚡ Sprint ended! ${s.participants.length} member(s) participated and earned 15 XP each! 🎉`
+            });
+            emitToPod(req.io, podId, "sprint:update", { sprint: s, ended: true });
+        }
+
         // Fetch active sprint (if any)
         const activeSprint = await PodSprint.findOne({ podId, status: "active" })
             .populate("startedBy", "name username profilePicture")

@@ -96,10 +96,50 @@ export default function Pods() {
     const [sprintDuration, setSprintDuration] = useState(30);
     const [sprintLoading, setSprintLoading] = useState(false);
 
+    // Sprint countdown & celebration states
+    const [sprintCelebration, setSprintCelebration] = useState(null);
+    const [sprintTimeLeft, setSprintTimeLeft] = useState("—");
+    const activeSprintRef = useRef(activeSprint);
+
     // Rivalry
     const [rivalOpen, setRivalOpen] = useState(false);
     const [rivalPodId, setRivalPodId] = useState("");
     const [rivalLoading, setRivalLoading] = useState(false);
+
+    useEffect(() => {
+        activeSprintRef.current = activeSprint;
+    }, [activeSprint]);
+
+    useEffect(() => {
+        if (!activeSprint) {
+            setSprintTimeLeft("—");
+            return;
+        }
+
+        const updateTimer = () => {
+            const endTime = new Date(activeSprint.endTime);
+            const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+            
+            if (remaining <= 0) {
+                setSprintTimeLeft("00:00");
+                getActiveSprint(selectedPodId).then(res => {
+                    if (res.data && !res.data.sprint) {
+                        setActiveSprint(null);
+                        fetchPodDetails(selectedPodId);
+                    }
+                }).catch(e => console.error("Error ending sprint:", e));
+                clearInterval(interval);
+            } else {
+                const m = Math.floor(remaining / 60).toString().padStart(2, "0");
+                const s = (remaining % 60).toString().padStart(2, "0");
+                setSprintTimeLeft(`${m}:${s}`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [activeSprint, selectedPodId, fetchPodDetails]);
 
     // Track reactions locally for optimistic updates
     const [localReactions, setLocalReactions] = useState({}); // { activityId: [{userId, emoji}] }
@@ -192,8 +232,22 @@ export default function Pods() {
 
         const onSprintUpdate = ({ sprint, ended }) => {
             if (ended) {
+                const currentSprint = activeSprintRef.current;
+                const userWasParticipant = currentSprint?.participants?.some(
+                    p => (p.userId?._id || p.userId)?.toString() === currentUser._id?.toString()
+                );
+                
                 setActiveSprint(null);
                 fetchPodDetails(selectedPodId); // refresh feed for sprint result
+                
+                if (userWasParticipant) {
+                    setSprintCelebration({
+                        duration: currentSprint?.duration || 30,
+                        xp: 15
+                    });
+                } else {
+                    showToast("⚡ Group sprint has ended! 15 XP awarded to participants.");
+                }
             } else {
                 setActiveSprint(sprint);
             }
@@ -709,7 +763,7 @@ export default function Pods() {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-mono text-2xl font-extrabold" style={{ color: '#0ea5e9' }}>{getSprintTimeLeft(activeSprint)}</p>
+                                                <p className="font-mono text-2xl font-extrabold" style={{ color: '#0ea5e9' }}>{sprintTimeLeft}</p>
                                                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">time left</p>
                                             </div>
                                         </div>
@@ -1429,6 +1483,44 @@ export default function Pods() {
                 </div>
             )}
 
+            {/* Sprint Completion Celebration Modal */}
+            {sprintCelebration && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+                    <div 
+                        className="w-full max-w-sm p-8 rounded-3xl border border-yellow-500/30 bg-[var(--bg-secondary)] text-center relative overflow-hidden"
+                        style={{
+                            boxShadow: '0 20px 50px rgba(234, 179, 8, 0.15)',
+                        }}
+                    >
+                        {/* Confetti & Glow backgrounds */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/5 to-teal-500/5 opacity-50 pointer-events-none" />
+                        <div className="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+                        
+                        <div className="relative z-10 flex flex-col items-center">
+                            <span className="text-5xl mb-4 animate-bounce">🏆</span>
+                            <h3 className="text-xl font-extrabold text-[var(--text-primary)]">Sprint Completed!</h3>
+                            <p className="text-xs text-[var(--text-muted)] mt-2">
+                                Incredible effort! You completed the {sprintCelebration.duration}-minute group study block.
+                            </p>
+                            
+                            {/* Reward badge card */}
+                            <div className="my-6 p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 w-full animate-pulse-slow">
+                                <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest block">Sprint Reward</span>
+                                <span className="text-2xl font-black text-yellow-500 mt-1 block">+{sprintCelebration.xp} XP</span>
+                            </div>
+                            
+                            <button
+                                onClick={() => setSprintCelebration(null)}
+                                className="w-full py-2.5 rounded-xl text-white text-xs font-semibold hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 12px var(--accent-glow)' }}
+                            >
+                                Awesome, Keep it up!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Toast toast={toast} />
         </div>
