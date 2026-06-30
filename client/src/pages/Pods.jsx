@@ -111,6 +111,14 @@ export default function Pods() {
         setTimeout(() => setToast(null), 3000);
     };
 
+    const updateActiveSprintSafe = useCallback((sprint) => {
+        if (sprint && new Date(sprint.endTime) > new Date()) {
+            setActiveSprint(sprint);
+        } else {
+            setActiveSprint(null);
+        }
+    }, []);
+
     const fetchInitialData = useCallback(async () => {
         setLoading(true);
         try {
@@ -147,7 +155,7 @@ export default function Pods() {
             const res = await getPodDetails(podId);
             setPodDetails(res.data.pod);
             setActivityFeed(res.data.activityFeed || []);
-            setActiveSprint(res.data.activeSprint || null);
+            updateActiveSprintSafe(res.data.activeSprint || null);
             setActiveRivalry(res.data.activeRivalry || null);
             // Seed local reactions from feed
             const reactionMap = {};
@@ -192,10 +200,10 @@ export default function Pods() {
 
         const onSprintUpdate = ({ sprint, ended }) => {
             if (ended) {
-                setActiveSprint(null);
+                updateActiveSprintSafe(null);
                 fetchPodDetails(selectedPodId); // refresh feed for sprint result
             } else {
-                setActiveSprint(sprint);
+                updateActiveSprintSafe(sprint);
             }
         };
 
@@ -421,7 +429,7 @@ export default function Pods() {
         setSprintLoading(true);
         try {
             const res = await startSprint(selectedPodId, sprintDuration);
-            setActiveSprint(res.data.sprint);
+            updateActiveSprintSafe(res.data.sprint);
             setSprintOpen(false);
             showToast(`⚡ ${sprintDuration}-min sprint started! Members notified.`);
         } catch (err) {
@@ -435,7 +443,7 @@ export default function Pods() {
         if (!activeSprint) return;
         try {
             const res = await joinSprint(selectedPodId, activeSprint._id);
-            setActiveSprint(res.data.sprint);
+            updateActiveSprintSafe(res.data.sprint);
             showToast("You joined the sprint! 💪");
         } catch (err) {
             showToast(err.response?.data?.message || "Failed to join sprint.", "error");
