@@ -39,7 +39,7 @@ function Toast({ toast }) {
     if (!toast) return null;
     const colors = {
         success: { bg: 'var(--accent-glow)', border: 'var(--accent-color)', color: 'var(--accent-color)' },
-        error:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.25)',  color: '#f87171' },
+        error: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)', color: '#f87171' },
     };
     const c = colors[toast.type] || colors.success;
     return (
@@ -48,8 +48,8 @@ function Toast({ toast }) {
             style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color, backdropFilter: 'blur(12px)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxWidth: 320 }}
         >
             {toast.type === 'success'
-                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
             }
             {toast.message}
         </div>
@@ -96,50 +96,10 @@ export default function Pods() {
     const [sprintDuration, setSprintDuration] = useState(30);
     const [sprintLoading, setSprintLoading] = useState(false);
 
-    // Sprint countdown & celebration states
-    const [sprintCelebration, setSprintCelebration] = useState(null);
-    const [sprintTimeLeft, setSprintTimeLeft] = useState("—");
-    const activeSprintRef = useRef(activeSprint);
-
     // Rivalry
     const [rivalOpen, setRivalOpen] = useState(false);
     const [rivalPodId, setRivalPodId] = useState("");
     const [rivalLoading, setRivalLoading] = useState(false);
-
-    useEffect(() => {
-        activeSprintRef.current = activeSprint;
-    }, [activeSprint]);
-
-    useEffect(() => {
-        if (!activeSprint) {
-            setSprintTimeLeft("—");
-            return;
-        }
-
-        const updateTimer = () => {
-            const endTime = new Date(activeSprint.endTime);
-            const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-            
-            if (remaining <= 0) {
-                setSprintTimeLeft("00:00");
-                getActiveSprint(selectedPodId).then(res => {
-                    if (res.data && !res.data.sprint) {
-                        setActiveSprint(null);
-                        fetchPodDetails(selectedPodId);
-                    }
-                }).catch(e => console.error("Error ending sprint:", e));
-                clearInterval(interval);
-            } else {
-                const m = Math.floor(remaining / 60).toString().padStart(2, "0");
-                const s = (remaining % 60).toString().padStart(2, "0");
-                setSprintTimeLeft(`${m}:${s}`);
-            }
-        };
-
-        updateTimer();
-        const interval = setInterval(updateTimer, 1000);
-        return () => clearInterval(interval);
-    }, [activeSprint, selectedPodId, fetchPodDetails]);
 
     // Track reactions locally for optimistic updates
     const [localReactions, setLocalReactions] = useState({}); // { activityId: [{userId, emoji}] }
@@ -158,7 +118,7 @@ export default function Pods() {
                 getUserPods(),
                 getPendingInvites()
             ]);
-            
+
             const fetchedPods = podsRes.data.pods || [];
             setPods(fetchedPods);
             setPendingInvites(invitesRes.data.invites || []);
@@ -232,22 +192,8 @@ export default function Pods() {
 
         const onSprintUpdate = ({ sprint, ended }) => {
             if (ended) {
-                const currentSprint = activeSprintRef.current;
-                const userWasParticipant = currentSprint?.participants?.some(
-                    p => (p.userId?._id || p.userId)?.toString() === currentUser._id?.toString()
-                );
-                
                 setActiveSprint(null);
                 fetchPodDetails(selectedPodId); // refresh feed for sprint result
-                
-                if (userWasParticipant) {
-                    setSprintCelebration({
-                        duration: currentSprint?.duration || 30,
-                        xp: 15
-                    });
-                } else {
-                    showToast("⚡ Group sprint has ended! 15 XP awarded to participants.");
-                }
             } else {
                 setActiveSprint(sprint);
             }
@@ -316,7 +262,7 @@ export default function Pods() {
             setNewPodName("");
             setNewPodDesc("");
             setCreateOpen(false);
-            
+
             // Auto-select the newly created pod
             setSelectedPodId(res.data.pod._id);
             fetchInitialData();
@@ -560,7 +506,7 @@ export default function Pods() {
                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 shadow-md cursor-pointer self-start sm:self-center"
                     style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
                 >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                     Create a Pod
                 </button>
             </div>
@@ -569,7 +515,7 @@ export default function Pods() {
             {pendingInvites.length > 0 && (
                 <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800/40 rounded-2xl p-4 space-y-3">
                     <h3 className="text-sky-900 dark:text-sky-300 font-bold text-sm flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
                         Pending Pod Invitations ({pendingInvites.length})
                     </h3>
                     <div className="divide-y divide-sky-100 dark:divide-sky-900/30">
@@ -624,7 +570,7 @@ export default function Pods() {
                 /* Empty state dashboard */
                 <div className="rounded-2xl p-8 text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-5 py-12" style={cardStyle}>
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-sky-100 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/30">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">Join or Create a Social Pod</h2>
@@ -651,11 +597,10 @@ export default function Pods() {
                                 <button
                                     key={pod._id}
                                     onClick={() => setSelectedPodId(pod._id)}
-                                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-shrink-0 cursor-pointer border ${
-                                        selectedPodId === pod._id
+                                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-shrink-0 cursor-pointer border ${selectedPodId === pod._id
                                             ? 'bg-sky-50 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800/40'
                                             : 'bg-[var(--bg-secondary)] text-slate-500 border-[var(--border-color)] hover:text-slate-700 dark:hover:text-slate-355'
-                                    }`}
+                                        }`}
                                 >
                                     {pod.name}
                                 </button>
@@ -695,7 +640,7 @@ export default function Pods() {
                                             className="p-2 rounded-lg text-slate-400 hover:text-rose-500 transition border border-[var(--border-color)] hover:border-rose-500/25 bg-[var(--bg-primary)] cursor-pointer"
                                             title="Leave Pod"
                                         >
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                                         </button>
                                     </div>
 
@@ -763,7 +708,7 @@ export default function Pods() {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-mono text-2xl font-extrabold" style={{ color: '#0ea5e9' }}>{sprintTimeLeft}</p>
+                                                <p className="font-mono text-2xl font-extrabold" style={{ color: '#0ea5e9' }}>{getSprintTimeLeft(activeSprint)}</p>
                                                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">time left</p>
                                             </div>
                                         </div>
@@ -829,7 +774,7 @@ export default function Pods() {
                                             onClick={() => setChallengeOpen(true)}
                                             className="text-xs font-bold text-sky-500 hover:text-sky-400 transition cursor-pointer flex items-center gap-1"
                                         >
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                             Start Challenge
                                         </button>
                                     </div>
@@ -846,7 +791,7 @@ export default function Pods() {
                                                         <span className="font-bold text-slate-700 dark:text-slate-300">{challenge.title}</span>
                                                         <span className="text-slate-400">Ends {new Date(challenge.endDate).toLocaleDateString()}</span>
                                                     </div>
-                                                    
+
                                                     {/* Progress bar */}
                                                     <div className="w-full bg-[var(--bg-primary)] h-2 rounded-full overflow-hidden border border-[var(--border-color)]">
                                                         <div
@@ -857,7 +802,7 @@ export default function Pods() {
                                                             }}
                                                         />
                                                     </div>
-                                                    
+
                                                     <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold uppercase">
                                                         <span>Progress</span>
                                                         <span>{getChallengeTotalXP(challenge)} / {challenge.targetXP} XP</span>
@@ -873,11 +818,10 @@ export default function Pods() {
                                     <div className="flex border-b border-[var(--border-color)] pb-1">
                                         <button
                                             onClick={() => setActiveTab("feed")}
-                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-                                                activeTab === "feed"
+                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "feed"
                                                     ? "border-sky-505 text-sky-500 border-sky-500 font-extrabold"
                                                     : "border-transparent text-slate-400 hover:text-slate-200"
-                                            }`}
+                                                }`}
                                         >
                                             Social Feed
                                         </button>
@@ -886,16 +830,15 @@ export default function Pods() {
                                                 setActiveTab("report");
                                                 handleLoadReport();
                                             }}
-                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-                                                activeTab === "report"
+                                            className={`pb-2 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "report"
                                                     ? "border-sky-505 text-sky-500 border-sky-500 font-extrabold"
                                                     : "border-transparent text-slate-400 hover:text-slate-200"
-                                            }`}
+                                                }`}
                                         >
                                             Weekly Report Card
                                         </button>
                                     </div>
-                                    
+
                                     {activeTab === "feed" ? (
                                         activityFeed.length === 0 ? (
                                             <p className="text-xs text-slate-400 text-center py-6">No recent pod activities yet. Hit those books!</p>
@@ -933,7 +876,7 @@ export default function Pods() {
                                                             >
                                                                 {iconMap[activity.type] || '•'}
                                                             </div>
-                                                            
+
                                                             <div className="flex justify-between items-start gap-4">
                                                                 <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
                                                                     {activity.message}
@@ -1069,22 +1012,21 @@ export default function Pods() {
                                         .map((member, index) => {
                                             const u = member.userId || {};
                                             const isMe = u._id === currentUser.id;
-                                            
+
                                             return (
                                                 <div
                                                     key={member._id}
-                                                    className={`flex items-center justify-between p-2.5 rounded-xl border ${
-                                                        isMe
+                                                    className={`flex items-center justify-between p-2.5 rounded-xl border ${isMe
                                                             ? 'bg-sky-50/40 dark:bg-sky-950/10 border-sky-200/50 dark:border-sky-850/30'
                                                             : 'bg-transparent border-transparent'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         {/* Rank */}
                                                         <span className="text-xs font-extrabold text-slate-400 w-4">
                                                             #{index + 1}
                                                         </span>
-                                                        
+
                                                         {/* Avatar */}
                                                         <div className="relative">
                                                             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold overflow-hidden flex-shrink-0">
@@ -1158,7 +1100,7 @@ export default function Pods() {
                                     onClick={() => setInviteOpen(true)}
                                     className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sky-500 border border-sky-500/20 hover:bg-sky-500/5 transition text-xs font-semibold mt-2 cursor-pointer"
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="16" y1="11" x2="22" y2="11" /></svg>
                                     Invite Friends
                                 </button>
                             </div>
@@ -1177,7 +1119,7 @@ export default function Pods() {
                                 onClick={() => setCreateOpen(false)}
                                 className="text-slate-400 hover:text-slate-200 cursor-pointer"
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
                         </div>
                         <form onSubmit={handleCreatePod} className="space-y-4">
@@ -1237,10 +1179,10 @@ export default function Pods() {
                                 onClick={() => setInviteOpen(false)}
                                 className="text-slate-400 hover:text-slate-200 cursor-pointer"
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleUserSearch} className="flex gap-2 mb-4">
                             <input
                                 required
@@ -1268,7 +1210,7 @@ export default function Pods() {
                                 searchResults.map(user => {
                                     const alreadyMember = podDetails?.members?.some(m => m.userId?._id === user._id);
                                     const invited = invitedUserIds.has(user._id);
-                                    
+
                                     return (
                                         <div key={user._id} className="flex items-center justify-between p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)]">
                                             <div className="flex items-center gap-2">
@@ -1280,13 +1222,13 @@ export default function Pods() {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                                                         {user.name} {user.username && <span className="text-[10px] text-slate-500 font-normal">@{user.username}</span>}
-                                                     </p>
-                                                     <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
-                                                 </div>
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                        {user.name} {user.username && <span className="text-[10px] text-slate-500 font-normal">@{user.username}</span>}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                                                </div>
                                             </div>
-                                            
+
                                             {alreadyMember ? (
                                                 <span className="text-[10px] text-slate-400 font-semibold uppercase pr-2">Member</span>
                                             ) : invited ? (
@@ -1318,7 +1260,7 @@ export default function Pods() {
                                 onClick={() => setChallengeOpen(false)}
                                 className="text-slate-400 hover:text-slate-200 cursor-pointer"
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
                         </div>
                         <form onSubmit={handleCreateChallenge} className="space-y-4">
@@ -1392,7 +1334,7 @@ export default function Pods() {
                                 onClick={() => setSprintOpen(false)}
                                 className="text-slate-400 hover:text-slate-200 cursor-pointer"
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
                         </div>
                         <form onSubmit={handleStartSprint} className="space-y-4">
@@ -1443,7 +1385,7 @@ export default function Pods() {
                                 onClick={() => setRivalOpen(false)}
                                 className="text-slate-400 hover:text-slate-200 cursor-pointer"
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
                         </div>
                         <form onSubmit={handleChallengeRival} className="space-y-4">
@@ -1483,44 +1425,6 @@ export default function Pods() {
                 </div>
             )}
 
-            {/* Sprint Completion Celebration Modal */}
-            {sprintCelebration && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-                    <div 
-                        className="w-full max-w-sm p-8 rounded-3xl border border-yellow-500/30 bg-[var(--bg-secondary)] text-center relative overflow-hidden"
-                        style={{
-                            boxShadow: '0 20px 50px rgba(234, 179, 8, 0.15)',
-                        }}
-                    >
-                        {/* Confetti & Glow backgrounds */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/5 to-teal-500/5 opacity-50 pointer-events-none" />
-                        <div className="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
-                        
-                        <div className="relative z-10 flex flex-col items-center">
-                            <span className="text-5xl mb-4 animate-bounce">🏆</span>
-                            <h3 className="text-xl font-extrabold text-[var(--text-primary)]">Sprint Completed!</h3>
-                            <p className="text-xs text-[var(--text-muted)] mt-2">
-                                Incredible effort! You completed the {sprintCelebration.duration}-minute group study block.
-                            </p>
-                            
-                            {/* Reward badge card */}
-                            <div className="my-6 p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 w-full animate-pulse-slow">
-                                <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest block">Sprint Reward</span>
-                                <span className="text-2xl font-black text-yellow-500 mt-1 block">+{sprintCelebration.xp} XP</span>
-                            </div>
-                            
-                            <button
-                                onClick={() => setSprintCelebration(null)}
-                                className="w-full py-2.5 rounded-xl text-white text-xs font-semibold hover:shadow-lg transition-all duration-200 cursor-pointer"
-                                style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 12px var(--accent-glow)' }}
-                            >
-                                Awesome, Keep it up!
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <Toast toast={toast} />
         </div>
