@@ -101,11 +101,16 @@ const getInsights = async (req, res) => {
             };
 
             const mlServiceUrl = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+
             const mlResponse = await fetch(`${mlServiceUrl}/predict`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(mlPayload)
+                body: JSON.stringify(mlPayload),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
 
             if (mlResponse.ok) {
                 mlPredictions = await mlResponse.json();

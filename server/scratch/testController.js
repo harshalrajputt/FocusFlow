@@ -1,15 +1,14 @@
 const mongoose = require("mongoose");
-const { getWeeklyReport, getActiveSprint } = require("../controllers/podController");
+const { getInsights } = require("../controllers/analyticsController");
 require("dotenv").config();
 
 const runTest = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
         
-        // Mock request for getWeeklyReport
+        // Mock request for getInsights
         const req = {
-            user: { id: "6a40f7993cefda9b2263e76f" }, // HARSHAL RAJPUT
-            params: { podId: "6a42a72a3d681b71a63ab457" } // codex
+            user: { id: "6a40f7993cefda9b2263e76f" } // HARSHAL RAJPUT
         };
 
         const res = {
@@ -19,35 +18,16 @@ const runTest = async () => {
                 return this;
             },
             json: function(data) {
-                console.log("=== getWeeklyReport RESPONSE ===");
+                console.log("=== getInsights RESPONSE ===");
                 console.log("Status Code:", this.statusCode);
-                console.log("JSON Data:", JSON.stringify(data, null, 2));
+                console.log("Stats:", data.stats);
+                console.log("ProfileAnalysis:", data.profileAnalysis);
+                console.log("Recommendations count:", data.recommendations?.length);
+                console.log("Using ML Predictions?:", data.mlPredictions !== null);
             }
         };
 
-        await getWeeklyReport(req, res);
-
-        // Test getActiveSprint
-        const reqSprint = {
-            user: { id: "6a40f7993cefda9b2263e76f" },
-            params: { podId: "6a42a72a3d681b71a63ab457" }
-        };
-
-        const resSprint = {
-            statusCode: 200,
-            status: function(code) {
-                this.statusCode = code;
-                return this;
-            },
-            json: function(data) {
-                console.log("\n=== getActiveSprint RESPONSE ===");
-                console.log("Status Code:", this.statusCode);
-                console.log("JSON Data:", JSON.stringify(data, null, 2));
-            }
-        };
-
-        await getActiveSprint(reqSprint, resSprint);
-
+        await getInsights(req, res);
         process.exit(0);
     } catch (e) {
         console.error(e);
