@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     getUserPods,
     getPodDetails,
@@ -57,6 +58,7 @@ function Toast({ toast }) {
 }
 
 export default function Pods() {
+    const navigate = useNavigate();
     const socket = useSocket();
     const [pods, setPods] = useState([]);
     const [selectedPodId, setSelectedPodId] = useState("");
@@ -72,6 +74,7 @@ export default function Pods() {
     const [loading, setLoading] = useState(true);
     const [podLoading, setPodLoading] = useState(false);
     const [toast, setToast] = useState(null);
+    const [showAdvancedPodMetrics, setShowAdvancedPodMetrics] = useState(false);
 
     // Modals
     const [createOpen, setCreateOpen] = useState(false);
@@ -110,6 +113,20 @@ export default function Pods() {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
+
+    const [showPublicRoom, setShowPublicRoom] = useState(false);
+    const [activePublicStudents, setActivePublicStudents] = useState(142);
+    const [showSprintCelebration, setShowSprintCelebration] = useState(false);
+    const [, setTick] = useState(0);
+
+    useEffect(() => {
+        if (showPublicRoom) {
+            const interval = setInterval(() => {
+                setActivePublicStudents(prev => prev + (Math.random() > 0.5 ? 1 : -1));
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [showPublicRoom]);
 
     const updateActiveSprintSafe = useCallback((sprint) => {
         if (sprint && new Date(sprint.endTime) > new Date()) {
@@ -171,6 +188,24 @@ export default function Pods() {
         }
     }, []);
 
+    useEffect(() => {
+        if (activeSprint) {
+            const timer = setInterval(() => {
+                const endTime = new Date(activeSprint.endTime);
+                const remaining = endTime - Date.now();
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    updateActiveSprintSafe(null);
+                    fetchPodDetails(selectedPodId);
+                    setShowSprintCelebration(true);
+                } else {
+                    setTick(t => t + 1);
+                }
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [activeSprint, selectedPodId, fetchPodDetails]);
+
     // ── Socket.io real-time listeners ──────────────────────────────────────────
     useEffect(() => {
         if (!socket) return;
@@ -202,6 +237,7 @@ export default function Pods() {
             if (ended) {
                 updateActiveSprintSafe(null);
                 fetchPodDetails(selectedPodId); // refresh feed for sprint result
+                setShowSprintCelebration(true);
             } else {
                 updateActiveSprintSafe(sprint);
             }
@@ -497,6 +533,63 @@ export default function Pods() {
         p => (p.userId?._id || p.userId)?.toString() === currentUser._id?.toString()
     );
 
+    if (showPublicRoom) {
+        return (
+            <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in">
+                <div className="flex justify-between items-center">
+                    <button
+                        onClick={() => setShowPublicRoom(false)}
+                        className="text-xs font-bold text-sky-505 text-sky-500 hover:text-sky-400 transition cursor-pointer flex items-center gap-1 border-none bg-transparent"
+                    >
+                        ← Back to Pods
+                    </button>
+                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-2.5 py-1 rounded-full font-bold animate-pulse">
+                        ● Live Public Room
+                    </span>
+                </div>
+
+                <div className="rounded-2xl p-8 text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-5 py-12" style={cardStyle}>
+                    <span className="text-4xl">🌎</span>
+                    <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">FocusFlow Public Study Hall</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                        Studying alongside other students, without the noise of group chats. Keep each other accountable in silence.
+                    </p>
+
+                    <div className="py-4 border-t border-b border-[var(--border-color)] w-full">
+                        <p className="text-2xl font-extrabold text-sky-500">{activePublicStudents}</p>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mt-1">Students Active Right Now</p>
+                    </div>
+
+                    <div className="space-y-3 text-left w-full">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Live Study Stream</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            <div className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-xs flex justify-between">
+                                <span className="font-semibold text-slate-700 dark:text-slate-350">Alex_Dev</span>
+                                <span className="text-emerald-500 font-semibold animate-pulse">Studying Calculus 📚</span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-xs flex justify-between">
+                                <span className="font-semibold text-slate-700 dark:text-slate-350">Sarah_K</span>
+                                <span className="text-emerald-500 font-semibold animate-pulse">Completing Web Project 💻</span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-xs flex justify-between">
+                                <span className="font-semibold text-slate-700 dark:text-slate-350">BioStudent</span>
+                                <span className="text-emerald-500 font-semibold animate-pulse">Studying Genetics 🧬</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => navigate("/focus?quickStart=true")}
+                        className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 shadow-md cursor-pointer"
+                        style={{ background: 'var(--accent-gradient)' }}
+                    >
+                        Start Focus Session alongside them ⏱️
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in">
             {/* Header Title */}
@@ -586,13 +679,21 @@ export default function Pods() {
                             Study pods are small accountability networks for 3–4 friends. You can keep track of streaks, participate in joint focus challenges, send motivational nudges, and level up with collective XP.
                         </p>
                     </div>
-                    <button
-                        onClick={() => setCreateOpen(true)}
-                        className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 shadow-md cursor-pointer"
-                        style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
-                    >
-                        Form a Study Pod
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+                        <button
+                            onClick={() => setCreateOpen(true)}
+                            className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 shadow-md cursor-pointer"
+                            style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 16px var(--accent-glow)' }}
+                        >
+                            Form a Study Pod
+                        </button>
+                        <button
+                            onClick={() => setShowPublicRoom(true)}
+                            className="px-5 py-2.5 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm font-semibold cursor-pointer transition-colors"
+                        >
+                            Join Public Study Hall 🌎
+                        </button>
+                    </div>
                 </div>
             ) : (
                 /* Primary Dashboard Grid */
@@ -629,16 +730,31 @@ export default function Pods() {
                                 <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
                                     <div className="flex justify-between items-start gap-4">
                                         <div>
-                                            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">{podDetails.name}</h2>
+                                            <div className="flex items-center gap-2">
+                                                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">{podDetails.name}</h2>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAdvancedPodMetrics(!showAdvancedPodMetrics)}
+                                                    className={`p-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] hover:border-sky-400 text-xs cursor-pointer transition ${showAdvancedPodMetrics ? 'text-sky-500 border-sky-400/30 bg-sky-500/5' : 'text-slate-400'}`}
+                                                    title="Toggle Settings & Advanced Metrics (Health/Rivalries)"
+                                                >
+                                                    ⚙️
+                                                </button>
+                                            </div>
                                             {podDetails.description && (
                                                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{podDetails.description}</p>
                                             )}
-                                            <p className="text-[10px] text-slate-400 font-mono mt-1.5 select-all cursor-pointer inline-flex items-center gap-1 bg-[var(--bg-primary)] px-2 py-0.5 rounded border border-[var(--border-color)] hover:border-sky-400 transition" title="Click to copy Pod ID" onClick={() => {
-                                                navigator.clipboard.writeText(podDetails._id);
-                                                showToast("Pod ID copied to clipboard!");
-                                            }}>
-                                                ID: {podDetails._id} 📋
-                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(podDetails._id);
+                                                    showToast("Pod ID copied to clipboard!");
+                                                }}
+                                                className="text-[10px] font-bold text-sky-500 hover:text-sky-400 transition flex items-center gap-1 mt-1 border-none bg-transparent cursor-pointer"
+                                                title="Copy Pod ID to clipboard to invite friends"
+                                            >
+                                                Copy Pod ID to Invite Friends 📋
+                                            </button>
                                             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-2.5">
                                                 Leader: <span className="text-slate-500 font-bold">{podDetails.leaderId?.name || "Unknown"}</span>
                                             </p>
@@ -652,8 +768,8 @@ export default function Pods() {
                                         </button>
                                     </div>
 
-                                    {/* Pod Health Bar */}
-                                    {(() => {
+                                    {/* Pod Health Bar (Hidden by default for early pods) */}
+                                    {(showAdvancedPodMetrics || podDetails.streak > 0 || podDetails.challenges?.length > 0 || activeRivalry !== null) && (() => {
                                         const health = podDetails.healthScore ?? 100;
                                         const hc = getHealthBarColor(health);
                                         return (
@@ -661,22 +777,22 @@ export default function Pods() {
                                                 <div className="flex justify-between items-center text-xs">
                                                     <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                                                         <span>❤️</span> Pod Health
-                                                    </span>
-                                                    <span className="font-bold" style={{ color: hc.color }}>{hc.label} · {health}%</span>
-                                                </div>
-                                                <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-700"
-                                                        style={{ width: `${health}%`, background: hc.color, boxShadow: `0 0 8px ${hc.glow}` }}
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                                                    <span>🔥 Streak: {podDetails.streak} days</span>
-                                                    <span>👥 {podDetails.members?.length || 0} members</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
+                                                     </span>
+                                                     <span className="font-bold" style={{ color: hc.color }}>{hc.label} · {health}%</span>
+                                                 </div>
+                                                 <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
+                                                     <div
+                                                         className="h-full rounded-full transition-all duration-700"
+                                                         style={{ width: `${health}%`, background: hc.color, boxShadow: `0 0 8px ${hc.glow}` }}
+                                                     />
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                                                     <span>🔥 Streak: {podDetails.streak} days</span>
+                                                     <span>👥 {podDetails.members?.length || 0} members</span>
+                                                 </div>
+                                             </div>
+                                         );
+                                     })()}
 
                                     {/* Action Buttons Row */}
                                     <div className="flex flex-wrap gap-2 pt-1">
@@ -743,36 +859,36 @@ export default function Pods() {
                                 )}
 
                                 {/* Rivalry Banner */}
-                                {activeRivalry && (() => {
-                                    const isChallenger = activeRivalry.challengerPodId?._id === selectedPodId || activeRivalry.challengerPodId === selectedPodId;
-                                    const myXP = isChallenger ? activeRivalry.challengerXP : activeRivalry.challengedXP;
-                                    const theirXP = isChallenger ? activeRivalry.challengedXP : activeRivalry.challengerXP;
-                                    const rivalName = isChallenger ? activeRivalry.challengedPodId?.name : activeRivalry.challengerPodId?.name;
-                                    const totalXP = myXP + theirXP || 1;
-                                    const myPct = Math.round((myXP / totalXP) * 100);
-                                    const daysLeft = activeRivalry.endDate ? Math.max(0, Math.ceil((new Date(activeRivalry.endDate) - Date.now()) / 86400000)) : 7;
-                                    return (
-                                        <div className="rounded-2xl p-5 space-y-3 border" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(239,68,68,0.06))', borderColor: 'rgba(249,115,22,0.3)' }}>
-                                            <div className="flex items-center justify-between">
-                                                <p className="font-extrabold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">⚔️ Rival Battle <span className="text-orange-400">LIVE</span></p>
-                                                <p className="text-xs text-slate-400">{daysLeft} days left</p>
-                                            </div>
-                                            <div className="flex items-center gap-3 text-sm font-bold">
-                                                <span className="text-sky-500">{podDetails.name}</span>
-                                                <span className="text-slate-400 text-xs">VS</span>
-                                                <span className="text-orange-500">{rivalName}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs text-slate-400">
-                                                    <span>{myXP} XP</span><span>{theirXP} XP</span>
-                                                </div>
-                                                <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(239,68,68,0.2)' }}>
-                                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${myPct}%`, background: 'linear-gradient(90deg, #0ea5e9, #0d9488)' }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
+                                {(showAdvancedPodMetrics || podDetails.streak > 0 || podDetails.challenges?.length > 0 || activeRivalry !== null) && activeRivalry && (() => {
+                                     const isChallenger = activeRivalry.challengerPodId?._id === selectedPodId || activeRivalry.challengerPodId === selectedPodId;
+                                     const myXP = isChallenger ? activeRivalry.challengerXP : activeRivalry.challengedXP;
+                                     const theirXP = isChallenger ? activeRivalry.challengedXP : activeRivalry.challengerXP;
+                                     const rivalName = isChallenger ? activeRivalry.challengedPodId?.name : activeRivalry.challengerPodId?.name;
+                                     const totalXP = myXP + theirXP || 1;
+                                     const myPct = Math.round((myXP / totalXP) * 100);
+                                     const daysLeft = activeRivalry.endDate ? Math.max(0, Math.ceil((new Date(activeRivalry.endDate) - Date.now()) / 86400000)) : 7;
+                                     return (
+                                         <div className="rounded-2xl p-5 space-y-3 border" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(239,68,68,0.06))', borderColor: 'rgba(249,115,22,0.3)' }}>
+                                             <div className="flex items-center justify-between">
+                                                 <p className="font-extrabold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">⚔️ Rival Battle <span className="text-orange-400">LIVE</span></p>
+                                                 <p className="text-xs text-slate-400">{daysLeft} days left</p>
+                                             </div>
+                                             <div className="flex items-center gap-3 text-sm font-bold">
+                                                 <span className="text-sky-500">{podDetails.name}</span>
+                                                 <span className="text-slate-400 text-xs">VS</span>
+                                                 <span className="text-orange-500">{rivalName}</span>
+                                             </div>
+                                             <div className="space-y-1">
+                                                 <div className="flex justify-between text-xs text-slate-400">
+                                                     <span>{myXP} XP</span><span>{theirXP} XP</span>
+                                                 </div>
+                                                 <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(239,68,68,0.2)' }}>
+                                                     <div className="h-full rounded-full transition-all duration-700" style={{ width: `${myPct}%`, background: 'linear-gradient(90deg, #0ea5e9, #0d9488)' }} />
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     );
+                                 })()}
 
                                 {/* Active Challenges */}
                                 <div className="rounded-2xl p-5 space-y-4" style={cardStyle}>
@@ -955,7 +1071,7 @@ export default function Pods() {
                                                 </div>
 
                                                 {/* MVP Spotlight */}
-                                                {weeklyReport.mvp?.user && (
+                                                {weeklyReport.mvp?.user && weeklyReport.mvp.xp > 0 && (
                                                     <div className="p-4 rounded-xl border border-yellow-500/25 bg-gradient-to-r from-yellow-500/5 to-amber-500/5 flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-2xl">🏆</span>
@@ -1015,93 +1131,101 @@ export default function Pods() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    {podDetails.members?.slice()
-                                        .sort((a, b) => (b.userId?.xp || 0) - (a.userId?.xp || 0))
-                                        .map((member, index) => {
-                                            const u = member.userId || {};
-                                            const isMe = u._id === currentUser.id;
+                                    {podDetails.members && podDetails.members.every(m => (m.userId?.xp || 0) === 0) ? (
+                                         <div className="text-center py-6 px-4 border border-dashed border-[var(--border-color)] rounded-xl">
+                                             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                                                 Be the first to log a study session today and claim the #1 spot! 🏆
+                                             </p>
+                                         </div>
+                                     ) : (
+                                         podDetails.members?.slice()
+                                             .sort((a, b) => (b.userId?.xp || 0) - (a.userId?.xp || 0))
+                                             .map((member, index) => {
+                                                 const u = member.userId || {};
+                                                 const isMe = u._id === currentUser.id;
 
-                                            return (
-                                                <div
-                                                    key={member._id}
-                                                    className={`flex items-center justify-between p-2.5 rounded-xl border ${isMe
-                                                            ? 'bg-sky-50/40 dark:bg-sky-950/10 border-sky-200/50 dark:border-sky-850/30'
-                                                            : 'bg-transparent border-transparent'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        {/* Rank */}
-                                                        <span className="text-xs font-extrabold text-slate-400 w-4">
-                                                            #{index + 1}
-                                                        </span>
+                                                 return (
+                                                     <div
+                                                         key={member._id}
+                                                         className={`flex items-center justify-between p-2.5 rounded-xl border ${isMe
+                                                                 ? 'bg-sky-50/40 dark:bg-sky-950/10 border-sky-200/50 dark:border-sky-850/30'
+                                                                 : 'bg-transparent border-transparent'
+                                                             }`}
+                                                     >
+                                                        <div className="flex items-center gap-3">
+                                                            {/* Rank */}
+                                                            <span className="text-xs font-extrabold text-slate-400 w-4">
+                                                                #{index + 1}
+                                                            </span>
 
-                                                        {/* Avatar */}
-                                                        <div className="relative">
-                                                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold overflow-hidden flex-shrink-0">
-                                                                {u.profilePicture ? (
-                                                                    <img src={u.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    u.name?.slice(0, 2).toUpperCase() || "U"
+                                                            {/* Avatar */}
+                                                            <div className="relative">
+                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold overflow-hidden flex-shrink-0">
+                                                                    {u.profilePicture ? (
+                                                                        <img src={u.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        u.name?.slice(0, 2).toUpperCase() || "U"
+                                                                    )}
+                                                                </div>
+                                                                {u.activeSessionStart && (
+                                                                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border border-[var(--bg-secondary)]" title="Studying now!" />
                                                                 )}
                                                             </div>
-                                                            {u.activeSessionStart && (
-                                                                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border border-[var(--bg-secondary)]" title="Studying now!" />
-                                                            )}
-                                                        </div>
 
-                                                        {/* Details */}
-                                                        <div className="min-w-0">
-                                                            <p className={`text-xs font-bold truncate ${isMe ? 'text-sky-600 dark:text-sky-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                                                                {u.name} {isMe && "(You)"}
-                                                            </p>
-                                                            {u.activeSessionStart ? (
-                                                                <p className="text-[10px] text-green-500 font-semibold animate-pulse mt-0.5">
-                                                                    ✍️ studying {u.activeTaskLabel ? `"${u.activeTaskLabel}"` : "now"}
+                                                            {/* Details */}
+                                                            <div className="min-w-0">
+                                                                <p className={`text-xs font-bold truncate ${isMe ? 'text-sky-600 dark:text-sky-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                                    {u.name} {isMe && "(You)"}
                                                                 </p>
-                                                            ) : (
-                                                                <p className="text-[10px] text-slate-400 mt-0.5">
-                                                                    🔥 {u.streak || 0} day streak
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* XP details & nudge actions */}
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                                                            {u.xp || 0} XP
-                                                        </span>
-
-                                                        {/* Nudge popup triggers (only for others) */}
-                                                        {!isMe && (
-                                                            <div className="flex gap-1">
-                                                                <button
-                                                                    onClick={() => handleSendNudge(u._id, "clap")}
-                                                                    className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-sky-400 text-[10px] cursor-pointer"
-                                                                    title="Send Kudos 👏"
-                                                                >
-                                                                    👏
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleSendNudge(u._id, "encourage")}
-                                                                    className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-teal-400 text-[10px] cursor-pointer"
-                                                                    title="Send Encourage 💪"
-                                                                >
-                                                                    💪
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleSendNudge(u._id, "poke")}
-                                                                    className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-orange-400 text-[10px] cursor-pointer"
-                                                                    title="Send Poke 👉"
-                                                                >
-                                                                    👉
-                                                                </button>
+                                                                {u.activeSessionStart ? (
+                                                                    <p className="text-[10px] text-green-500 font-semibold animate-pulse mt-0.5">
+                                                                        ✍️ studying {u.activeTaskLabel ? `"${u.activeTaskLabel}"` : "now"}
+                                                                    </p>
+                                                                ) : (
+                                                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                                                        🔥 {u.streak || 0} day streak
+                                                                    </p>
+                                                                )}
                                                             </div>
-                                                        )}
+                                                        </div>
+
+                                                        {/* XP details & nudge actions */}
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                                                                {u.xp || 0} XP
+                                                            </span>
+
+                                                            {/* Nudge popup triggers (only for others) */}
+                                                            {!isMe && (
+                                                                <div className="flex gap-1">
+                                                                    <button
+                                                                        onClick={() => handleSendNudge(u._id, "clap")}
+                                                                        className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-sky-400 text-[10px] cursor-pointer"
+                                                                        title="Send Kudos 👏"
+                                                                    >
+                                                                        👏
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleSendNudge(u._id, "encourage")}
+                                                                        className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-teal-400 text-[10px] cursor-pointer"
+                                                                        title="Send Encourage 💪"
+                                                                    >
+                                                                        💪
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleSendNudge(u._id, "poke")}
+                                                                        className="p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-orange-400 text-[10px] cursor-pointer"
+                                                                        title="Send Poke 👉"
+                                                                    >
+                                                                        👉
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })
+                                     )}
                                 </div>
 
                                 <button
@@ -1433,6 +1557,28 @@ export default function Pods() {
                 </div>
             )}
 
+
+            {/* SPRINT CELEBRATION CONGRATULATIONS MODAL */}
+            {showSprintCelebration && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md p-6 rounded-2xl animate-fade-in-up text-center space-y-4" style={cardStyle}>
+                        <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex items-center justify-center mx-auto text-2xl animate-bounce">
+                            🏆
+                        </div>
+                        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Group Sprint Completed!</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Excellent work! You and your pod members finished the focus sprint. Everyone who participated has been awarded <span className="text-emerald-500 font-extrabold">+15 XP</span>! ⚡
+                        </p>
+                        <button
+                            onClick={() => setShowSprintCelebration(false)}
+                            className="w-full py-2.5 rounded-xl text-white text-xs font-semibold cursor-pointer"
+                            style={{ background: 'var(--accent-gradient)' }}
+                        >
+                            Claim Reward & Close 🎉
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <Toast toast={toast} />
         </div>

@@ -19,6 +19,7 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 const websiteUsageRoutes = require("./routes/websiteUsageRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const podRoutes = require("./routes/podRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -66,6 +67,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/website-usage", websiteUsageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pods", podRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Register cron jobs
 require("./jobs/podHealthJob")(io);

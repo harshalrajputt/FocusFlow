@@ -144,9 +144,66 @@ export default function Dashboard() {
         }).catch(() => {});
     }, []);
 
-    // Daily target helper (240 minutes / 4 hours default target)
-    const DAILY_TARGET_MINUTES = 240;
+    const hasHistory = focusSummary.totalFocusMinutes > 0 || taskStats.total > 0;
+    const DAILY_TARGET_MINUTES = hasHistory ? 240 : 25;
     const progressPercent = Math.min(100, Math.round((focusSummary.todayFocusMinutes / DAILY_TARGET_MINUTES) * 100));
+
+    const exportStreakCard = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext("2d");
+
+        // Background gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, 400);
+        grad.addColorStop(0, "#0f172a");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 400, 400);
+
+        // Styling Border
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.2)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(15, 15, 370, 370);
+
+        // Header Title
+        ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#38bdf8";
+        ctx.textAlign = "center";
+        ctx.fillText("FOCUSFLOW STUDY CARD", 200, 50);
+
+        // User handle
+        ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(`@${user.username || firstName}`, 200, 95);
+
+        // Fire emoji icon
+        ctx.font = "70px system-ui, -apple-system, sans-serif";
+        ctx.fillText("🔥", 200, 185);
+
+        // Streak count
+        ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#f59e0b";
+        ctx.fillText(`${focusSummary.currentStreak} Day Streak`, 200, 235);
+
+        // Summary details
+        ctx.font = "14px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText(`Today's Focus: ${(focusSummary.todayFocusMinutes / 60).toFixed(1)} hrs`, 200, 280);
+        ctx.fillText(`Web Focus Score: ${webStats.focusScore}%`, 200, 305);
+
+        // Tier classification
+        ctx.font = "bold 15px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#0ea5e9";
+        ctx.fillText("Sky Blue Tier Student", 200, 345);
+
+        // Save
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.download = `focusflow-streak-${user.username || firstName}.png`;
+        link.href = dataUrl;
+        link.click();
+    };
 
     return (
         <div className="p-6 md:p-8 max-w-5xl mx-auto w-full space-y-8 animate-fade-in">
@@ -174,32 +231,57 @@ export default function Dashboard() {
             </div>
 
             {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {buildStatCards(taskStats, focusSummary, webStats).map((s, i) => (
-                    <TiltContainer
-                        key={s.label}
-                        className={`animate-fade-in-up delay-${i + 1} rounded-2xl cursor-default stat-card-glow group`}
-                        style={{
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            boxShadow: 'var(--shadow-sm)',
-                        }}
+            {!hasHistory ? (
+                <TiltContainer
+                    className="w-full rounded-2xl stat-card-glow p-6 text-center animate-fade-in-up"
+                    style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        boxShadow: 'var(--shadow-sm)',
+                    }}
+                >
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                        Welcome to FocusFlow! 🚀
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 max-w-lg mx-auto leading-relaxed">
+                        Let's start your very first study block. No tasks or configurations needed—just click below to start a quick 25-minute Pomodoro timer!
+                    </p>
+                    <button
+                        onClick={() => navigate("/focus?quickStart=true")}
+                        className="px-6 py-2.5 rounded-xl font-bold text-white text-xs transition cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                        style={{ background: 'var(--accent-gradient)' }}
                     >
-                        <div className="p-5 relative overflow-hidden h-full w-full">
-                            {/* Glow */}
-                            <div className="absolute inset-0 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
-                            <div className="relative z-10">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110" style={{ background: s.iconBg }}>
-                                    {s.icon}
+                        Start Quick Focus Timer ⏱️
+                    </button>
+                </TiltContainer>
+            ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {buildStatCards(taskStats, focusSummary, webStats).map((s, i) => (
+                        <TiltContainer
+                            key={s.label}
+                            className={`animate-fade-in-up delay-${i + 1} rounded-2xl cursor-default stat-card-glow group`}
+                            style={{
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                boxShadow: 'var(--shadow-sm)',
+                            }}
+                        >
+                            <div className="p-5 relative overflow-hidden h-full w-full">
+                                {/* Glow */}
+                                <div className="absolute inset-0 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at top right, ${s.glow}, transparent 70%)` }} />
+                                <div className="relative z-10">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110" style={{ background: s.iconBg }}>
+                                        {s.icon}
+                                    </div>
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-1">{s.label}</p>
+                                    <p className="text-4xl font-extrabold tracking-tight" style={{ color: s.valueColor }}>{s.value}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{s.sub}</p>
                                 </div>
-                                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-1">{s.label}</p>
-                                <p className="text-4xl font-extrabold tracking-tight" style={{ color: s.valueColor }}>{s.value}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{s.sub}</p>
                             </div>
-                        </div>
-                    </TiltContainer>
-                ))}
-            </div>
+                        </TiltContainer>
+                    ))}
+                </div>
+            )}
 
             {/* ── Bottom Row ── */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -281,6 +363,12 @@ export default function Dashboard() {
                                 >
                                     Start focus session
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <button
+                                    onClick={exportStreakCard}
+                                    className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[var(--border-color)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-xs font-semibold cursor-pointer transition-colors"
+                                >
+                                    Export Shareable Streak Card 🤳
                                 </button>
                             </div>
                         </TiltContainer>

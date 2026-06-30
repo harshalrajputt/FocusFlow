@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import Schedule from "./pages/Schedule";
 import Pods from "./pages/Pods";
+import Flashcards from "./pages/Flashcards";
 
 import { useEffect } from "react";
 import { applyAppearanceSettings } from "./utils/theme";
@@ -103,6 +104,11 @@ function App() {
             <Route
               path="/pods"
               element={<Pods />}
+            />
+
+            <Route
+              path="/flashcards"
+              element={<Flashcards />}
             />
 
           </Route>

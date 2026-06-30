@@ -192,10 +192,18 @@ If you miss a scheduled session:
 * Marking it **Critical** runs the **Rearrangement Engine**, which automatically reschedules the study block into your upcoming free hours while strictly protecting your sleep and predefined lifestyle blocks (e.g. Gym, gaming).
 
 ### 4. Social Pods (Accountability Groups)
-Connect with up to 4 friends to study together:
-* **Group Streaks**: Maintain daily streaks by having all members complete at least one focus session.
-* **Quests/Challenges**: Work together on collaborative goals (e.g., target 200 XP).
-* **Nudges**: Poke (👉), Clap (👏), or Encourage (💪) friends to keep them motivated.
+Connect with friends in small group accountability circles to study and level up together:
+* **Unique Username System**: Compulsory handle registration (`@username`) displaying handles on the sidebar, header dropdowns, and allowing quick friend searches.
+* **Real-Time Presence Tracking**: Green status indicator pulses and live study task labels next to users' names on the pod leaderboard.
+* **Interactive Feed Reactions**: React using 🔥, 👏, 💯, or 🚀 to pod activity updates and earn a solidarity XP bonus (+2 XP).
+* **Pod Health Bar**: Tracks collective consistency. Decays by 15 health points every 6 hours, replenished by +20 health points upon completed study sessions (capped at 100%).
+* **Group Sprint Rooms**: Initiate 30, 45, or 60-minute real-time group sprints. Non-participants can join instantly. Completing a sprint awards +15 XP and triggers a celebration modal.
+* **Weekly Report Cards**: In-depth weekly breakdown of total pod XP, active study days, consistency rates, and pod MVP spotlights.
+* **Rival Pod Battles**: Initiate 7-day head-to-head XP battles against rival pods using their unique copyable Pod IDs, complete with comparative live progress bars.
 
 ### 5. Multi-level Aggregation & ML analytics
 Visualizes website activity on daily, weekly, and monthly levels. The FastAPI service analyzes these metrics to output **burnout risks**, **completion probabilities**, and **AI coach tips**.
+
+### 6. Production Performance & Reliability
+* **Null Safety Guards**: All core controllers, notifications dispatchers, and weekly cron jobs are fully guarded against missing, deleted, or orphaned user accounts in production.
+* **Analytics Cold-Start Mitigation**: Contact requests to the Python ML microservice are guarded by a 2.5-second abort controller. If the ML server is asleep, it gracefully aborts and falls back to the local Rule-Based Insights Engine instantly.

@@ -229,6 +229,15 @@ const FocusSession = () => {
         fetchTasks();
     }, []);
 
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        if ((queryParams.get("quickStart") === "true" || queryParams.get("initOnboarding") === "true") && !running) {
+            setCompleted(false);
+            setRunning(true);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, [tasks]);
+
     // Phase 3: Submit session logs with behavioral metrics
     const saveSessionWithFeedback = async (feedbackData = {}) => {
         if (!pendingSession) return;
