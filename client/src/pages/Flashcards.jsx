@@ -293,7 +293,7 @@ export default function Flashcards() {
 
                                 <div>
                                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-505 text-sky-500 mb-2">
-                                        Groq API Key (Optional if set in server .env)
+                                        Groq API Key
                                     </label>
                                     <input
                                         type="password"
@@ -304,6 +304,7 @@ export default function Flashcards() {
                                             localStorage.setItem("focusflow_groq_key", e.target.value);
                                         }}
                                         style={inputStyle}
+                                        required
                                     />
                                 </div>
 

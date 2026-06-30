@@ -201,9 +201,16 @@ Connect with friends in small group accountability circles to study and level up
 * **Weekly Report Cards**: In-depth weekly breakdown of total pod XP, active study days, consistency rates, and pod MVP spotlights.
 * **Rival Pod Battles**: Initiate 7-day head-to-head XP battles against rival pods using their unique copyable Pod IDs, complete with comparative live progress bars.
 
-### 5. Multi-level Aggregation & ML analytics
+### 5. AI Study Tools & Spaced-Repetition Review Hub
+Transform raw study notes, lecture slides, or uploaded PDF/text files into highly customized flashcards instantly:
+* **PDF & Text Extraction**: Upload class handouts (PDF/TXT) or paste lecture slides. The backend parses document contents using `pdf-parse` to feed the contextual review pipeline.
+* **Flexible Card-Count Configuration**: Specify exactly how many flashcards you want generated (1 to 15 cards).
+* **Client-side API Keys**: Enforces public-mode privacy by requiring users to configure their own Groq API keys (`gsk_...`) saved securely in the browser's `localStorage`.
+* **SM-2 Algorithmic Review**: Uses the SuperMemo SM-2 algorithm to dynamically reschedule flashcards. Rate your recall as **Hard** 🔴, **Good** 🔵, or **Easy** 🟢 to automatically shift repetition intervals and optimize long-term retention.
+
+### 6. Multi-level Aggregation & ML analytics
 Visualizes website activity on daily, weekly, and monthly levels. The FastAPI service analyzes these metrics to output **burnout risks**, **completion probabilities**, and **AI coach tips**.
 
-### 6. Production Performance & Reliability
+### 7. Production Performance & Reliability
 * **Null Safety Guards**: All core controllers, notifications dispatchers, and weekly cron jobs are fully guarded against missing, deleted, or orphaned user accounts in production.
 * **Analytics Cold-Start Mitigation**: Contact requests to the Python ML microservice are guarded by a 2.5-second abort controller. If the ML server is asleep, it gracefully aborts and falls back to the local Rule-Based Insights Engine instantly.
