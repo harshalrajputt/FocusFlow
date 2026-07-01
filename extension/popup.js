@@ -338,6 +338,8 @@ function restoreTimerState(state, pausedByDomain = false) {
 
     updateTimerDisplay();
 
+    // Disable configurations while running to prevent conflicts
+    const allowedSitesInput = document.getElementById("allowed-work-sites");
     if (isRunning) {
         playBtn.innerText = "⏸";
         if (pausedByDomain) {
@@ -347,10 +349,22 @@ function restoreTimerState(state, pausedByDomain = false) {
             statusDisplay.innerText = currentModeIdx === 0 ? "⚡ Distraction blocker: active" : "Timer running";
             statusDisplay.style.color = "";
         }
+
+        modeFocus.disabled = true;
+        modeShort.disabled = true;
+        modeLong.disabled = true;
+        taskSelect.disabled = true;
+        if (allowedSitesInput) allowedSitesInput.disabled = true;
     } else {
         playBtn.innerText = "▶";
         statusDisplay.innerText = "Timer paused";
         statusDisplay.style.color = "";
+
+        modeFocus.disabled = false;
+        modeShort.disabled = false;
+        modeLong.disabled = false;
+        taskSelect.disabled = false;
+        if (allowedSitesInput) allowedSitesInput.disabled = false;
     }
 }
 

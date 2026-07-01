@@ -163,23 +163,34 @@ function saveTimerStateToStorage() {
 }
 
 function broadcastStateToTabs(extra = {}) {
+    const timerState = {
+        isRunning: isTimerRunning,
+        currentModeIdx,
+        remainingSeconds,
+        targetEndTime,
+        taskId,
+        allowedSites
+    };
+
+    // Broadcast to extension popup if open
+    chrome.runtime.sendMessage({
+        type: "TIMER_TICK",
+        state: timerState,
+        ...extra
+    }, () => {
+        if (chrome.runtime.lastError) {}
+    });
+
+    // Broadcast to open tabs
     chrome.tabs.query({}, (tabs) => {
         if (tabs && tabs.length > 0) {
             tabs.forEach(tab => {
                 if (tab.id) {
                     chrome.tabs.sendMessage(tab.id, {
                         type: "TIMER_TICK",
-                        state: {
-                            isRunning: isTimerRunning,
-                            currentModeIdx,
-                            remainingSeconds,
-                            targetEndTime,
-                            taskId,
-                            allowedSites
-                        },
+                        state: timerState,
                         ...extra
                     }, () => {
-                        // Suppress runtime error warnings for tabs without content scripts loaded
                         if (chrome.runtime.lastError) {}
                     });
                 }
@@ -360,25 +371,53 @@ async function handleTimerCompleteInBackground() {
 
 // Listen for messages from popup.js or content.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    const timerState = {
+        isRunning: isTimerRunning,
+        currentModeIdx,
+        remainingSeconds,
+        targetEndTime,
+        taskId,
+        allowedSites
+    };
+
     if (request.type === "PING") {
         sendResponse({ type: "PONG" });
     } else if (request.type === "START_TIMER") {
         startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites);
-        sendResponse({ status: "running", remainingSeconds });
+        sendResponse({
+            type: "TIMER_TICK",
+            state: {
+                isRunning: true,
+                currentModeIdx: request.modeIdx,
+                remainingSeconds: request.duration,
+                targetEndTime: Date.now() + request.duration * 1000,
+                taskId: request.taskId,
+                allowedSites: request.allowedSites
+            }
+        });
     } else if (request.type === "PAUSE_TIMER") {
         pauseTimerInBackground();
-        sendResponse({ status: "paused" });
+        sendResponse({
+            type: "TIMER_TICK",
+            state: {
+                ...timerState,
+                isRunning: false
+            }
+        });
     } else if (request.type === "RESET_TIMER") {
         resetTimerInBackground();
-        sendResponse({ status: "reset" });
+        sendResponse({
+            type: "TIMER_TICK",
+            state: {
+                ...timerState,
+                isRunning: false,
+                remainingSeconds: currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60)
+            }
+        });
     } else if (request.type === "GET_TIMER_STATE") {
         sendResponse({
-            isRunning: isTimerRunning,
-            currentModeIdx,
-            remainingSeconds,
-            targetEndTime,
-            taskId,
-            allowedSites
+            type: "TIMER_TICK",
+            state: timerState
         });
     } else if (request.type === "UPDATE_ALLOWED_SITES") {
         allowedSites = request.allowedSites || [];
