@@ -190,7 +190,23 @@ const FocusSession = () => {
     const [extensionActive, setExtensionActive] = useState(false);
     const [pausedByDomain, setPausedByDomain] = useState(false);
 
-    const mode = MODES[modeIdx];
+    // Custom Durations configuration (Phase 23)
+    const [modes, setModes] = useState(() => {
+        const saved = localStorage.getItem("focusflow_custom_durations");
+        const durations = saved ? JSON.parse(saved) : { focus: 25, short: 5, long: 15 };
+        return [
+            { ...MODES[0], duration: durations.focus },
+            { ...MODES[1], duration: durations.short },
+            { ...MODES[2], duration: durations.long },
+        ];
+    });
+
+    const [showDurationsConfig, setShowDurationsConfig] = useState(false);
+    const [focusInput, setFocusInput] = useState(25);
+    const [shortInput, setShortInput] = useState(5);
+    const [longInput, setLongInput] = useState(15);
+
+    const mode = modes[modeIdx];
     const total = mode.duration * 60;
     const remaining = total - elapsed;
     const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
@@ -236,14 +252,40 @@ const FocusSession = () => {
 
     // Listen for extension message syncs and ping on mount
     useEffect(() => {
-        // Send first ping
-        window.postMessage({ source: "focusflow-webapp", type: "PING" }, "*");
-
         // Load pre-saved allowed work sites from local storage if present
         const savedAllowedSites = localStorage.getItem("allowedWorkSites");
         if (savedAllowedSites) {
             setAllowedWorkSites(savedAllowedSites);
         }
+
+        // Load custom timer durations
+        const savedDurations = localStorage.getItem("focusflow_custom_durations");
+        const parsedDurations = savedDurations ? JSON.parse(savedDurations) : { focus: 25, short: 5, long: 15 };
+        if (savedDurations) {
+            setFocusInput(parsedDurations.focus);
+            setShortInput(parsedDurations.short);
+            setLongInput(parsedDurations.long);
+        }
+
+        // Restore standalone timer state if active on last reload
+        const savedStateStr = localStorage.getItem("focusflow_timer_state");
+        if (savedStateStr) {
+            const savedState = JSON.parse(savedStateStr);
+            if (savedState.running && savedState.targetEndTime && savedState.targetEndTime > Date.now()) {
+                setModeIdx(savedState.modeIdx);
+                setStartTime(new Date(savedState.startTime));
+                setRunning(true);
+                const durMin = savedState.modeIdx === 0 ? (parsedDurations?.focus || 25) : (savedState.modeIdx === 1 ? (parsedDurations?.short || 5) : (parsedDurations?.long || 15));
+                const modeTotal = durMin * 60;
+                const newElapsed = modeTotal - Math.round((savedState.targetEndTime - Date.now()) / 1000);
+                setElapsed(Math.max(0, newElapsed));
+            } else if (!savedState.running) {
+                setModeIdx(savedState.modeIdx);
+                setElapsed(savedState.elapsed || 0);
+            }
+        }
+
+        let pingInterval = null;
 
         const handleMessage = (event) => {
             if (event.source !== window) return;
@@ -251,14 +293,25 @@ const FocusSession = () => {
             if (message && message.source === "focusflow-extension") {
                 if (message.type === "PONG") {
                     setExtensionActive(true);
+                    if (pingInterval) {
+                        clearInterval(pingInterval);
+                        pingInterval = null;
+                    }
                     window.postMessage({ source: "focusflow-webapp", type: "GET_TIMER_STATE" }, "*");
                 } else if (message.type === "TIMER_TICK") {
                     setExtensionActive(true);
+                    if (pingInterval) {
+                        clearInterval(pingInterval);
+                        pingInterval = null;
+                    }
                     const state = message.state;
                     if (state) {
                         setRunning(state.isRunning);
                         setModeIdx(state.currentModeIdx);
-                        const durationSec = state.currentModeIdx === 0 ? 25 * 60 : (state.currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+                        const savedDurs = localStorage.getItem("focusflow_custom_durations");
+                        const parsedDurs = savedDurs ? JSON.parse(savedDurs) : { focus: 25, short: 5, long: 15 };
+                        const durMin = state.currentModeIdx === 0 ? parsedDurs.focus : (state.currentModeIdx === 1 ? parsedDurs.short : parsedDurs.long);
+                        const durationSec = durMin * 60;
                         setElapsed(durationSec - state.remainingSeconds);
                         setPausedByDomain(!!message.pausedByDomain);
                         if (state.taskId) {
@@ -281,8 +334,47 @@ const FocusSession = () => {
         };
 
         window.addEventListener("message", handleMessage);
-        return () => window.removeEventListener("message", handleMessage);
+
+        // Send a ping immediately
+        window.postMessage({ source: "focusflow-webapp", type: "PING" }, "*");
+
+        // Setup ping retry interval (every 1.5 seconds) to handle slower content script injection
+        pingInterval = setInterval(() => {
+            window.postMessage({ source: "focusflow-webapp", type: "PING" }, "*");
+        }, 1500);
+
+        return () => {
+            window.removeEventListener("message", handleMessage);
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+        };
     }, []);
+    // Persist standalone state to localStorage (Phase 23)
+    useEffect(() => {
+        if (extensionActive) return; // Extension manages its own background timer persistence
+
+        if (running) {
+            const targetEndTime = Date.now() + (total - elapsed) * 1000;
+            localStorage.setItem("focusflow_timer_state", JSON.stringify({
+                running: true,
+                modeIdx,
+                targetEndTime,
+                elapsed,
+                startTime: startTime ? startTime.toISOString() : new Date().toISOString(),
+                allowedWorkSites
+            }));
+        } else {
+            localStorage.setItem("focusflow_timer_state", JSON.stringify({
+                running: false,
+                modeIdx,
+                targetEndTime: null,
+                elapsed,
+                startTime: null,
+                allowedWorkSites
+            }));
+        }
+    }, [running, modeIdx, elapsed, startTime, extensionActive, allowedWorkSites, total]);
 
     useEffect(() => {
         const queryParams = new URLSearchParams(window.location.search);
@@ -336,7 +428,7 @@ const FocusSession = () => {
     };
 
     const handleSessionComplete = (durationSecs) => {
-        const currentMode = MODES[modeIdx];
+        const currentMode = modes[modeIdx];
         const end = new Date();
         const start = startTime || new Date(end.getTime() - durationSecs * 1000);
 
@@ -372,8 +464,8 @@ const FocusSession = () => {
 
     const logInterruptedSession = () => {
         setCompleted(false);
-        if (elapsed >= 10 && startTime && MODES[modeIdx].label === "Focus") {
-            const currentMode = MODES[modeIdx];
+        if (elapsed >= 10 && startTime && modes[modeIdx].label === "Focus") {
+            const currentMode = modes[modeIdx];
             const end = new Date();
             
             setPendingSession({
@@ -405,7 +497,7 @@ const FocusSession = () => {
             timer = setInterval(() => {
                 setElapsed((prev) => {
                     const nextElapsed = prev + 1;
-                    const mode = MODES[modeIdx];
+                    const mode = modes[modeIdx];
                     const total = mode.duration * 60;
                     if (nextElapsed >= total) {
                         clearInterval(timer);
@@ -424,13 +516,13 @@ const FocusSession = () => {
             clearInterval(timer);
         }
         return () => clearInterval(timer);
-    }, [running, modeIdx, startTime, selectedTaskId, extensionActive]);
+    }, [running, modeIdx, startTime, selectedTaskId, extensionActive, modes]);
 
     const handlePlayPause = () => {
         if (!running) {
             setCompleted(false);
             // Announce to pod members that a focus session is starting
-            if (MODES[modeIdx].label === "Focus") {
+            if (modes[modeIdx].label === "Focus") {
                 const task = tasks.find(t => t._id === selectedTaskId);
                 const label = task?.shareWithPod !== false ? (task?.title || "") : "";
                 updatePresence(true, label).catch(() => {});
@@ -477,6 +569,35 @@ const FocusSession = () => {
         setPausedByDomain(false);
     };
 
+    const saveCustomDurations = () => {
+        const durations = { focus: Number(focusInput), short: Number(shortInput), long: Number(longInput) };
+        localStorage.setItem("focusflow_custom_durations", JSON.stringify(durations));
+        
+        setModes([
+            { ...MODES[0], duration: durations.focus },
+            { ...MODES[1], duration: durations.short },
+            { ...MODES[2], duration: durations.long },
+        ]);
+
+        if (extensionActive) {
+            window.postMessage({
+                source: "focusflow-webapp",
+                type: "UPDATE_CONFIGS",
+                allowedSites: allowedWorkSites.split(",").map(s => s.trim().toLowerCase()).filter(Boolean),
+                customSettings: {
+                    focusTime: durations.focus,
+                    shortTime: durations.short,
+                    longTime: durations.long
+                }
+            }, "*");
+        }
+        
+        if (!running) {
+            setElapsed(0);
+        }
+        setShowDurationsConfig(false);
+    };
+
     const handleReset = () => {
         setCompleted(false);
         if (running) {
@@ -510,7 +631,7 @@ const FocusSession = () => {
         }
         setRunning(false);
         setPausedByDomain(false);
-        setModeIdx((modeIdx + 1) % MODES.length);
+        setModeIdx((modeIdx + 1) % modes.length);
     };
 
     return (
@@ -524,7 +645,7 @@ const FocusSession = () => {
 
             {/* Mode selector */}
             <div className="flex gap-1.5 rounded-xl p-1.5 animate-fade-in-up delay-1" style={cardStyle}>
-                {MODES.map((m, i) => (
+                {modes.map((m, i) => (
                     <button
                         key={m.label}
                         onClick={() => switchMode(i)}
@@ -636,7 +757,7 @@ const FocusSession = () => {
 
             {/* Distraction logging button (Phase 3) */}
             {running && mode.label === "Focus" && (
-                <div className="flex justify-center animate-fade-in">
+                <div className="flex flex-col items-center gap-1.5 animate-fade-in">
                     <button
                         type="button"
                         onClick={() => setInterruptions(prev => prev + 1)}
@@ -644,6 +765,9 @@ const FocusSession = () => {
                     >
                         ⚡ Log Distraction ({interruptions})
                     </button>
+                    <p className="text-[10px] text-[var(--text-muted)] text-center max-w-xs leading-relaxed">
+                        Log momentary distractions during study. This helps the FocusFlow ML Engine refine your dynamic daily burnout risk.
+                    </p>
                 </div>
             )}
 
@@ -682,6 +806,74 @@ const FocusSession = () => {
                 <p className="text-[10px] text-[var(--text-muted)] text-center">
                     Timer only runs when active on these websites. (Leave blank to allow all).
                 </p>
+            </div>
+
+            {/* Custom Durations Accordion (Phase 23) */}
+            <div className="rounded-xl overflow-hidden max-w-sm mx-auto w-full animate-fade-in-up delay-2" style={cardStyle}>
+                <button
+                    onClick={() => setShowDurationsConfig(!showDurationsConfig)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
+                >
+                    <span>⚙️ Configure Timer Durations</span>
+                    <span>{showDurationsConfig ? "▲" : "▼"}</span>
+                </button>
+                {showDurationsConfig && (
+                    <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-primary)] space-y-4">
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Focus (m)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="180"
+                                    value={focusInput}
+                                    onChange={(e) => setFocusInput(e.target.value)}
+                                    disabled={running}
+                                    className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Short (m)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="60"
+                                    value={shortInput}
+                                    onChange={(e) => setShortInput(e.target.value)}
+                                    disabled={running}
+                                    className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Long (m)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="120"
+                                    value={longInput}
+                                    onChange={(e) => setLongInput(e.target.value)}
+                                    disabled={running}
+                                    className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowDurationsConfig(false)}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveCustomDurations}
+                                disabled={running}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-[var(--accent-color)] text-white hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Session Stats */}

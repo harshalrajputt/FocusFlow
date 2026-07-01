@@ -102,11 +102,24 @@ function syncLogsToBackend() {
             const logs = res.webUsageLogs;
             const dateStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format local date
             
-            const logList = Object.entries(logs).map(([domain, timeSpent]) => ({
-                domain,
-                timeSpent,
-                date: dateStr
-            }));
+            const logList = Object.entries(logs).map(([domain, timeSpent]) => {
+                let category = null;
+                if (isTimerRunning && allowedSites && allowedSites.length > 0) {
+                    const isMatch = allowedSites.some(site => {
+                        const cleanSite = site.trim().replace("www.", "").toLowerCase();
+                        return cleanSite && domain.toLowerCase().includes(cleanSite);
+                    });
+                    if (isMatch) {
+                        category = "Productive";
+                    }
+                }
+                return {
+                    domain,
+                    timeSpent,
+                    date: dateStr,
+                    category
+                };
+            });
             
             if (logList.length === 0) return;
             
@@ -220,8 +233,8 @@ function checkActiveTabForTimerDecrement(callback) {
             const urlObj = new URL(url);
             const domain = urlObj.hostname.replace("www.", "");
 
-            // Always allow FocusFlow app itself (localhost or any focusflow domain)
-            if (domain.includes("localhost") || domain.includes("focusflow") || url.startsWith("chrome-extension://")) {
+            // Always allow chrome-extension internal settings pages
+            if (url.startsWith("chrome-extension://")) {
                 callback(true);
                 return;
             }

@@ -91,7 +91,7 @@ const logWebsiteUsage = async (req, res) => {
             const { domain, timeSpent, date } = log;
             if (!domain || !date || typeof timeSpent !== "number" || timeSpent <= 0) continue;
             
-            const category = classifyDomain(domain);
+            const category = log.category || classifyDomain(domain);
             
             // 1. Increment Daily
             await WebsiteUsage.findOneAndUpdate(
