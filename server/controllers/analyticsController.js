@@ -77,15 +77,32 @@ const getInsights = async (req, res) => {
             else neutMonthly += m.timeSpent;
         });
 
+        // Fetch pending tasks to evaluate academic/workload pressure
+        const tasks = await Task.find({ userId, status: { $ne: "Completed" } });
+        const criticalTasksCount = tasks.filter(t => t.priority === "Critical").length;
+        const highTasksCount = tasks.filter(t => t.priority === "High").length;
+        const mediumTasksCount = tasks.filter(t => t.priority === "Medium").length;
+        const lowTasksCount = tasks.filter(t => t.priority === "Low").length;
+
+        const nowTime = new Date();
+        const oneDayFromNow = new Date(nowTime.getTime() + 24 * 60 * 60 * 1000);
+        const dueSoonTasksCount = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= nowTime && new Date(t.dueDate) <= oneDayFromNow).length;
+
         // Connect to Python FastAPI ML Service
         let mlPredictions = null;
         try {
             const mlPayload = {
+                user_id: userId.toString(),
                 sleep_time: profile.schedule?.sleepTime || "22:00",
                 wake_up_time: profile.schedule?.wakeUpTime || "06:00",
                 session_duration: profile.focus?.preferredSessionDuration || 25,
                 distractions_count: profile.focus?.biggestDistractions?.length || 0,
                 energy_level: profile.productivity?.energyLevels?.evening || 5,
+                critical_tasks_count: criticalTasksCount,
+                high_tasks_count: highTasksCount,
+                medium_tasks_count: mediumTasksCount,
+                low_tasks_count: lowTasksCount,
+                due_soon_tasks_count: dueSoonTasksCount,
                 history: sessions.slice(0, 50).map(s => ({
                     startTime: s.startTime.toISOString(),
                     duration: s.duration,
@@ -103,7 +120,7 @@ const getInsights = async (req, res) => {
 
             const mlServiceUrl = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
             const mlResponse = await fetch(`${mlServiceUrl}/predict`, {
                 method: "POST",
