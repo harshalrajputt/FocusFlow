@@ -12,6 +12,14 @@ let blockedSites = [
 ];
 let allowedSites = [];
 
+// Timer State
+let timerInterval = null;
+let remainingSeconds = 25 * 60;
+let currentModeIdx = 0; // 0: Focus, 1: Short, 2: Long
+let isTimerRunning = false;
+let taskId = null;
+let targetEndTime = null;
+
 // Load custom config if present on startup
 chrome.storage.local.get("customSettings", (res) => {
     if (res.customSettings) {
@@ -64,6 +72,20 @@ function accumulateTime(domain, seconds) {
     });
 }
 
+// Environment Discovery helper
+function getBackendUrl(callback) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        let url = "https://focusflow-backend-liuf.onrender.com/api";
+        if (tabs && tabs[0] && tabs[0].url) {
+            const pageUrl = tabs[0].url;
+            if (pageUrl.includes("localhost") || pageUrl.includes("127.0.0.1")) {
+                url = "http://localhost:5000/api";
+            }
+        }
+        callback(url);
+    });
+}
+
 // Send accumulated logs to backend
 function syncLogsToBackend() {
     // Flush current domain time first to capture latest active session seconds
@@ -88,34 +110,36 @@ function syncLogsToBackend() {
             
             if (logList.length === 0) return;
             
-            fetch("https://focusflow-backend-liuf.onrender.com/api/website-usage/log", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${res.token}`
-                },
-                body: JSON.stringify({ logs: logList })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Subtract successfully sent logs to prevent race conditions during browsing
-                    chrome.storage.local.get(["webUsageLogs"], (currentRes) => {
-                        const currentLogs = currentRes.webUsageLogs || {};
-                        for (const [domain, sentSec] of Object.entries(logs)) {
-                            if (currentLogs[domain]) {
-                                currentLogs[domain] -= sentSec;
-                                if (currentLogs[domain] <= 0) {
-                                    delete currentLogs[domain];
+            getBackendUrl((backendUrl) => {
+                fetch(`${backendUrl}/website-usage/log`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${res.token}`
+                    },
+                    body: JSON.stringify({ logs: logList })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Subtract successfully sent logs to prevent race conditions during browsing
+                        chrome.storage.local.get(["webUsageLogs"], (currentRes) => {
+                            const currentLogs = currentRes.webUsageLogs || {};
+                            for (const [domain, sentSec] of Object.entries(logs)) {
+                                if (currentLogs[domain]) {
+                                    currentLogs[domain] -= sentSec;
+                                    if (currentLogs[domain] <= 0) {
+                                        delete currentLogs[domain];
+                                    }
                                 }
                             }
-                        }
-                        chrome.storage.local.set({ webUsageLogs: currentLogs });
-                    });
-                }
-            })
-            .catch(err => {
-                console.error("Error syncing web logs to backend:", err);
+                            chrome.storage.local.set({ webUsageLogs: currentLogs });
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error("Error syncing web logs to backend:", err);
+                });
             });
         });
     });
@@ -124,9 +148,244 @@ function syncLogsToBackend() {
 // Run periodic sync flush to server every 30 seconds
 setInterval(syncLogsToBackend, 30000);
 
-// Listen for messages from popup.js
+// Timer persistence helpers
+function saveTimerStateToStorage() {
+    chrome.storage.local.set({
+        timerState: {
+            isRunning: isTimerRunning,
+            currentModeIdx,
+            remainingSeconds,
+            targetEndTime,
+            taskId,
+            allowedSites
+        }
+    });
+}
+
+function broadcastStateToTabs(extra = {}) {
+    chrome.tabs.query({}, (tabs) => {
+        if (tabs && tabs.length > 0) {
+            tabs.forEach(tab => {
+                if (tab.id) {
+                    chrome.tabs.sendMessage(tab.id, {
+                        type: "TIMER_TICK",
+                        state: {
+                            isRunning: isTimerRunning,
+                            currentModeIdx,
+                            remainingSeconds,
+                            targetEndTime,
+                            taskId,
+                            allowedSites
+                        },
+                        ...extra
+                    }, () => {
+                        // Suppress runtime error warnings for tabs without content scripts loaded
+                        if (chrome.runtime.lastError) {}
+                    });
+                }
+            });
+        }
+    });
+}
+
+function checkActiveTabForTimerDecrement(callback) {
+    if (!allowedSites || allowedSites.length === 0) {
+        callback(true);
+        return;
+    }
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || tabs.length === 0) {
+            callback(false);
+            return;
+        }
+        
+        try {
+            const url = tabs[0].url;
+            if (!url) {
+                callback(false);
+                return;
+            }
+            const urlObj = new URL(url);
+            const domain = urlObj.hostname.replace("www.", "");
+
+            // Always allow FocusFlow app itself (localhost or any focusflow domain)
+            if (domain.includes("localhost") || domain.includes("focusflow") || url.startsWith("chrome-extension://")) {
+                callback(true);
+                return;
+            }
+
+            // Check if domain matches any of the allowed sites
+            const isMatch = allowedSites.some(site => {
+                const cleanSite = site.trim().replace("www.", "");
+                return cleanSite && domain.includes(cleanSite);
+            });
+
+            callback(isMatch);
+        } catch (e) {
+            callback(false);
+        }
+    });
+}
+
+function startTimerInBackground(duration, modeIdx, tId, allowed) {
+    clearInterval(timerInterval);
+    isTimerRunning = true;
+    remainingSeconds = duration;
+    currentModeIdx = modeIdx;
+    taskId = tId;
+    allowedSites = allowed || [];
+    targetEndTime = Date.now() + remainingSeconds * 1000;
+
+    // Enable blocker if starting a Focus session
+    if (currentModeIdx === 0) {
+        isFocusActive = true;
+        blockActiveTabs();
+    }
+
+    saveTimerStateToStorage();
+    broadcastStateToTabs();
+
+    timerInterval = setInterval(() => {
+        if (!isTimerRunning) {
+            clearInterval(timerInterval);
+            return;
+        }
+
+        checkActiveTabForTimerDecrement((shouldDecrement) => {
+            if (shouldDecrement) {
+                remainingSeconds--;
+                targetEndTime = Date.now() + remainingSeconds * 1000;
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    handleTimerCompleteInBackground();
+                } else {
+                    saveTimerStateToStorage();
+                    broadcastStateToTabs();
+                }
+            } else {
+                targetEndTime = Date.now() + remainingSeconds * 1000;
+                saveTimerStateToStorage();
+                broadcastStateToTabs({ pausedByDomain: true });
+            }
+        });
+    }, 1000);
+}
+
+function pauseTimerInBackground() {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    isFocusActive = false; // Disable blocker
+    saveTimerStateToStorage();
+    broadcastStateToTabs();
+}
+
+function resetTimerInBackground() {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    isFocusActive = false;
+    remainingSeconds = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+    saveTimerStateToStorage();
+    broadcastStateToTabs();
+}
+
+async function handleTimerCompleteInBackground() {
+    isTimerRunning = false;
+    isFocusActive = false;
+    saveTimerStateToStorage();
+
+    // Broadcast play alarm to open tabs
+    chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+            if (tab.id) {
+                chrome.tabs.sendMessage(tab.id, { type: "PLAY_ALARM" }, () => {
+                    if (chrome.runtime.lastError) {}
+                });
+            }
+        });
+    });
+
+    // Native desktop notification
+    chrome.notifications.create({
+        type: "basic",
+        iconUrl: "assets/icon128.png",
+        title: "FocusFlow Alert ⚡",
+        message: `${currentModeIdx === 0 ? "Focus block" : "Break time"} completed! Take a step back and breathe.`,
+        priority: 2
+    }, () => {
+        if (chrome.runtime.lastError) {}
+    });
+
+    // Save session logs to Backend
+    chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
+        if (!res.token) return;
+
+        const duration = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+        const end = new Date();
+        const start = new Date(end.getTime() - duration * 1000);
+        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
+
+        getBackendUrl(async (backendUrl) => {
+            try {
+                await fetch(`${backendUrl}/focus`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${res.token}`
+                    },
+                    body: JSON.stringify({
+                        taskId: taskId || null,
+                        sessionType: currentModeIdx === 0 ? "Focus" : (currentModeIdx === 1 ? "Short Break" : "Long Break"),
+                        duration,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString(),
+                        completed: true,
+                        interruptions: metrics.interruptions || 0,
+                        pauseCount: metrics.pauseCount || 0,
+                        followedSchedule: true,
+                        difficultyRating: 3,
+                        difficultyFeedback: "Normal"
+                    })
+                });
+                // Reset metrics in storage
+                chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
+            } catch (err) {
+                console.error("Failed to auto-save completed session from background:", err);
+            }
+        });
+    });
+}
+
+// Listen for messages from popup.js or content.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === "START_FOCUS") {
+    if (request.type === "PING") {
+        sendResponse({ type: "PONG" });
+    } else if (request.type === "START_TIMER") {
+        startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites);
+        sendResponse({ status: "running", remainingSeconds });
+    } else if (request.type === "PAUSE_TIMER") {
+        pauseTimerInBackground();
+        sendResponse({ status: "paused" });
+    } else if (request.type === "RESET_TIMER") {
+        resetTimerInBackground();
+        sendResponse({ status: "reset" });
+    } else if (request.type === "GET_TIMER_STATE") {
+        sendResponse({
+            isRunning: isTimerRunning,
+            currentModeIdx,
+            remainingSeconds,
+            targetEndTime,
+            taskId,
+            allowedSites
+        });
+    } else if (request.type === "UPDATE_ALLOWED_SITES") {
+        allowedSites = request.allowedSites || [];
+        saveTimerStateToStorage();
+        broadcastStateToTabs();
+        sendResponse({ status: "updated" });
+    } else if (request.type === "START_FOCUS") {
         isFocusActive = true;
         if (request.blockedSites && request.blockedSites.length > 0) {
             blockedSites = request.blockedSites;
@@ -204,7 +463,6 @@ function blockActiveTabs() {
 // Monitor tab updates and block if focus is active
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url) {
-        // Track the domain update if it's the active tab in the current window
         chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
             if (activeTabs && activeTabs[0] && activeTabs[0].id === tabId) {
                 trackCurrentDomain(changeInfo.url);
@@ -233,7 +491,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 // Monitor window focus activation
 chrome.windows.onFocusChanged.addListener((windowId) => {
     if (windowId === chrome.windows.WINDOW_ID_NONE) {
-        // Browser minimized or lost focus; stop tracking active time
         trackCurrentDomain(null);
     } else {
         chrome.tabs.query({ active: true, windowId: windowId }, (activeTabs) => {

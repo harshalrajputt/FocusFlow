@@ -185,6 +185,11 @@ const FocusSession = () => {
     const [pendingSession, setPendingSession] = useState(null);
     const [completed, setCompleted] = useState(false);
 
+    // Extension & allowed domains tracking
+    const [allowedWorkSites, setAllowedWorkSites] = useState("");
+    const [extensionActive, setExtensionActive] = useState(false);
+    const [pausedByDomain, setPausedByDomain] = useState(false);
+
     const mode = MODES[modeIdx];
     const total = mode.duration * 60;
     const remaining = total - elapsed;
@@ -227,6 +232,56 @@ const FocusSession = () => {
     useEffect(() => {
         fetchSummary();
         fetchTasks();
+    }, []);
+
+    // Listen for extension message syncs and ping on mount
+    useEffect(() => {
+        // Send first ping
+        window.postMessage({ source: "focusflow-webapp", type: "PING" }, "*");
+
+        // Load pre-saved allowed work sites from local storage if present
+        const savedAllowedSites = localStorage.getItem("allowedWorkSites");
+        if (savedAllowedSites) {
+            setAllowedWorkSites(savedAllowedSites);
+        }
+
+        const handleMessage = (event) => {
+            if (event.source !== window) return;
+            const message = event.data;
+            if (message && message.source === "focusflow-extension") {
+                if (message.type === "PONG") {
+                    setExtensionActive(true);
+                    window.postMessage({ source: "focusflow-webapp", type: "GET_TIMER_STATE" }, "*");
+                } else if (message.type === "TIMER_TICK") {
+                    setExtensionActive(true);
+                    const state = message.state;
+                    if (state) {
+                        setRunning(state.isRunning);
+                        setModeIdx(state.currentModeIdx);
+                        const durationSec = state.currentModeIdx === 0 ? 25 * 60 : (state.currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+                        setElapsed(durationSec - state.remainingSeconds);
+                        setPausedByDomain(!!message.pausedByDomain);
+                        if (state.taskId) {
+                            setSelectedTaskId(state.taskId);
+                        }
+                        if (state.allowedSites && state.allowedSites.length > 0) {
+                            setAllowedWorkSites(state.allowedSites.join(", "));
+                        }
+                    }
+                } else if (message.type === "PLAY_ALARM") {
+                    try {
+                        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
+                        audio.play();
+                    } catch (e) {
+                        console.error("Failed to play alarm audio", e);
+                    }
+                    fetchSummary();
+                }
+            }
+        };
+
+        window.addEventListener("message", handleMessage);
+        return () => window.removeEventListener("message", handleMessage);
     }, []);
 
     useEffect(() => {
@@ -339,6 +394,9 @@ const FocusSession = () => {
     };
 
     useEffect(() => {
+        // If extension is active, we let the extension background script handle countdown and sync ticks
+        if (extensionActive) return;
+
         let timer = null;
         if (running) {
             if (!startTime) {
@@ -353,6 +411,10 @@ const FocusSession = () => {
                         clearInterval(timer);
                         setRunning(false);
                         handleSessionComplete(total);
+                        try {
+                            const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
+                            audio.play();
+                        } catch (e) {}
                         return total;
                     }
                     return nextElapsed;
@@ -362,7 +424,7 @@ const FocusSession = () => {
             clearInterval(timer);
         }
         return () => clearInterval(timer);
-    }, [running, modeIdx, startTime, selectedTaskId]);
+    }, [running, modeIdx, startTime, selectedTaskId, extensionActive]);
 
     const handlePlayPause = () => {
         if (!running) {
@@ -373,11 +435,31 @@ const FocusSession = () => {
                 const label = task?.shareWithPod !== false ? (task?.title || "") : "";
                 updatePresence(true, label).catch(() => {});
             }
+
+            if (extensionActive) {
+                localStorage.setItem("allowedWorkSites", allowedWorkSites);
+                const allowed = allowedWorkSites.split(",").map(s => s.trim()).filter(Boolean);
+                window.postMessage({
+                    source: "focusflow-webapp",
+                    type: "START_TIMER",
+                    duration: total - elapsed,
+                    modeIdx,
+                    taskId: selectedTaskId || null,
+                    allowedSites: allowed
+                }, "*");
+            }
+        } else {
+            if (running) {
+                setPauseCount(prev => prev + 1);
+            }
+            if (extensionActive) {
+                window.postMessage({ source: "focusflow-webapp", type: "PAUSE_TIMER" }, "*");
+            }
         }
-        if (running) {
-            setPauseCount(prev => prev + 1);
+        
+        if (!extensionActive) {
+            setRunning(!running);
         }
-        setRunning(!running);
     };
 
     const switchMode = (i) => {
@@ -385,10 +467,14 @@ const FocusSession = () => {
         if (running) {
             logInterruptedSession();
         }
+        if (extensionActive) {
+            window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
+        }
         setModeIdx(i);
         setRunning(false);
         setElapsed(0);
         setStartTime(null);
+        setPausedByDomain(false);
     };
 
     const handleReset = () => {
@@ -401,7 +487,11 @@ const FocusSession = () => {
             setPauseCount(0);
             setInterruptions(0);
         }
+        if (extensionActive) {
+            window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
+        }
         setRunning(false);
+        setPausedByDomain(false);
         // Clear presence on manual reset
         updatePresence(false).catch(() => {});
     };
@@ -415,7 +505,11 @@ const FocusSession = () => {
             setPauseCount(0);
             setInterruptions(0);
         }
+        if (extensionActive) {
+            window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
+        }
         setRunning(false);
+        setPausedByDomain(false);
         setModeIdx((modeIdx + 1) % MODES.length);
     };
 
@@ -487,10 +581,17 @@ const FocusSession = () => {
                         <span className="font-mono font-extrabold text-[var(--text-primary)] text-5xl tracking-tighter">{mins}:{secs}</span>
                         <span className="text-[var(--text-muted)] text-sm mt-1 font-semibold tracking-wide uppercase text-[10px]">{mode.label}</span>
                         {running && (
-                            <span className="text-xs mt-2.5 font-bold animate-pulse-dot flex items-center gap-1.5" style={{ color: mode.ringColor }}>
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: mode.ringColor }} />
-                                Live
-                            </span>
+                            pausedByDomain ? (
+                                <span className="text-xs mt-2.5 font-bold text-amber-500 animate-pulse flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    Paused (Wrong Tab)
+                                </span>
+                            ) : (
+                                <span className="text-xs mt-2.5 font-bold animate-pulse-dot flex items-center gap-1.5" style={{ color: mode.ringColor }}>
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: mode.ringColor }} />
+                                    Live
+                                </span>
+                            )
                         )}
                     </div>
                 </div>
@@ -563,6 +664,24 @@ const FocusSession = () => {
                         </option>
                     ))}
                 </select>
+            </div>
+
+            {/* Allowed Work URLs */}
+            <div className="flex flex-col gap-2 animate-fade-in-up delay-2 max-w-sm mx-auto w-full">
+                <label className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] text-center">
+                    Allowed Work URLs (Optional)
+                </label>
+                <input
+                    type="text"
+                    value={allowedWorkSites}
+                    onChange={(e) => setAllowedWorkSites(e.target.value)}
+                    placeholder="youtube.com, chatgpt.com, claude.ai"
+                    disabled={running}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] focus:border-[var(--accent-color)] focus:shadow-[0_0_0_3px_var(--accent-glow)] rounded-xl text-[var(--text-primary)] text-sm outline-none px-4 py-3 transition-all duration-200"
+                />
+                <p className="text-[10px] text-[var(--text-muted)] text-center">
+                    Timer only runs when active on these websites. (Leave blank to allow all).
+                </p>
             </div>
 
             {/* Session Stats */}

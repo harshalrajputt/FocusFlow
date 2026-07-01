@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://focusflow-backend-liuf.onrender.com/api";
+let BACKEND_URL = "https://focusflow-backend-liuf.onrender.com/api";
 
 // DOM Elements
 const authScreen = document.getElementById("auth-screen");
@@ -29,49 +29,62 @@ let isRunning = false;
 let startTimeStamp = null;
 
 // Initialize
-chrome.storage.local.get(["token", "timerState", "customSettings"], (result) => {
-    // Load custom settings
-    let customSettings = result.customSettings || {
-        focusTime: 25,
-        shortTime: 5,
-        longTime: 15,
-        blockedSites: ["youtube.com", "instagram.com", "facebook.com", "reddit.com", "netflix.com"],
-        allowedSites: ["google.com", "github.com", "localhost"]
-    };
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs && tabs[0] && tabs[0].url) {
+        const pageUrl = tabs[0].url;
+        if (pageUrl.includes("localhost") || pageUrl.includes("127.0.0.1")) {
+            BACKEND_URL = "http://localhost:5000/api";
+        }
+    }
 
-    // Update inputs in popup
-    document.getElementById("cfg-focus-time").value = customSettings.focusTime;
-    document.getElementById("cfg-short-time").value = customSettings.shortTime;
-    document.getElementById("cfg-long-time").value = customSettings.longTime;
-    document.getElementById("cfg-blocked-sites").value = customSettings.blockedSites.join(", ");
-    document.getElementById("cfg-allowed-sites").value = customSettings.allowedSites.join(", ");
+    chrome.storage.local.get(["token", "timerState", "customSettings", "allowedWorkSites"], (result) => {
+        // Load custom settings
+        let customSettings = result.customSettings || {
+            focusTime: 25,
+            shortTime: 5,
+            longTime: 15,
+            blockedSites: ["youtube.com", "instagram.com", "facebook.com", "reddit.com", "netflix.com"],
+            allowedSites: ["google.com", "github.com", "localhost"]
+        };
 
-    // Override DURATIONS
-    DURATIONS[0] = customSettings.focusTime * 60;
-    DURATIONS[1] = customSettings.shortTime * 60;
-    DURATIONS[2] = customSettings.longTime * 60;
+        if (result.allowedWorkSites) {
+            document.getElementById("allowed-work-sites").value = result.allowedWorkSites;
+        }
 
-    // Send update configs to background on start
-    chrome.runtime.sendMessage({
-        type: "UPDATE_CONFIGS",
-        blockedSites: customSettings.blockedSites,
-        allowedSites: customSettings.allowedSites
+        // Update inputs in popup
+        document.getElementById("cfg-focus-time").value = customSettings.focusTime;
+        document.getElementById("cfg-short-time").value = customSettings.shortTime;
+        document.getElementById("cfg-long-time").value = customSettings.longTime;
+        document.getElementById("cfg-blocked-sites").value = customSettings.blockedSites.join(", ");
+        document.getElementById("cfg-allowed-sites").value = customSettings.allowedSites.join(", ");
+
+        // Override DURATIONS
+        DURATIONS[0] = customSettings.focusTime * 60;
+        DURATIONS[1] = customSettings.shortTime * 60;
+        DURATIONS[2] = customSettings.longTime * 60;
+
+        // Send update configs to background on start
+        chrome.runtime.sendMessage({
+            type: "UPDATE_CONFIGS",
+            blockedSites: customSettings.blockedSites,
+            allowedSites: customSettings.allowedSites
+        });
+
+        if (result.token) {
+            showTimerScreen(result.token);
+            // Force background script to flush active telemetry to the server
+            chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
+        } else {
+            showAuthScreen();
+        }
+
+        if (result.timerState) {
+            restoreTimerState(result.timerState);
+        } else {
+            remainingSeconds = DURATIONS[currentModeIdx];
+            updateTimerDisplay();
+        }
     });
-
-    if (result.token) {
-        showTimerScreen(result.token);
-        // Force background script to flush active telemetry to the server
-        chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
-    } else {
-        showAuthScreen();
-    }
-
-    if (result.timerState) {
-        restoreTimerState(result.timerState);
-    } else {
-        remainingSeconds = DURATIONS[currentModeIdx];
-        updateTimerDisplay();
-    }
 });
 
 // Authentication UI
@@ -217,13 +230,12 @@ function updateTimerDisplay() {
 }
 
 // Mode Selection
+// Mode Selection
 modeFocus.addEventListener("click", () => switchMode(0));
 modeShort.addEventListener("click", () => switchMode(1));
 modeLong.addEventListener("click", () => switchMode(2));
 
 function switchMode(idx) {
-    clearInterval(timerInterval);
-    isRunning = false;
     currentModeIdx = idx;
     remainingSeconds = DURATIONS[idx];
     updateTimerDisplay();
@@ -236,6 +248,7 @@ function switchMode(idx) {
         else btn.classList.remove("active");
     });
     
+    chrome.runtime.sendMessage({ type: "RESET_TIMER" });
     saveTimerState();
 }
 
@@ -251,7 +264,6 @@ playBtn.addEventListener("click", () => {
 function startTimer() {
     isRunning = true;
     playBtn.innerText = "⏸";
-    startTimeStamp = Date.now();
     statusDisplay.innerText = currentModeIdx === 0 ? "⚡ Distraction blocker: active" : "Timer running";
 
     // Reset session metrics if starting a fresh focus session
@@ -265,27 +277,20 @@ function startTimer() {
         });
     }
 
-    const targetEndTime = Date.now() + remainingSeconds * 1000;
+    const allowedVal = document.getElementById("allowed-work-sites").value;
+    const allowed = allowedVal.split(",").map(s => s.trim()).filter(Boolean);
+    chrome.storage.local.set({ allowedWorkSites: allowedVal });
 
-    timerInterval = setInterval(() => {
-        const left = Math.round((targetEndTime - Date.now()) / 1000);
-        if (left <= 0) {
-            clearInterval(timerInterval);
-            remainingSeconds = 0;
-            updateTimerDisplay();
-            handleTimerComplete();
-        } else {
-            remainingSeconds = left;
-            updateTimerDisplay();
-        }
-        saveTimerState(targetEndTime);
-    }, 1000);
-
-    saveTimerState(targetEndTime);
+    chrome.runtime.sendMessage({
+        type: "START_TIMER",
+        duration: remainingSeconds,
+        modeIdx: currentModeIdx,
+        taskId: taskSelect.value || null,
+        allowedSites: allowed
+    });
 }
 
 function pauseTimer() {
-    clearInterval(timerInterval);
     isRunning = false;
     playBtn.innerText = "▶";
     statusDisplay.innerText = "Timer paused";
@@ -297,115 +302,65 @@ function pauseTimer() {
         chrome.storage.local.set({ sessionMetrics: metrics });
     });
 
-    // Stop distraction blocker
-    chrome.runtime.sendMessage({ type: "STOP_FOCUS" });
-    saveTimerState();
+    chrome.runtime.sendMessage({ type: "PAUSE_TIMER" });
 }
 
 resetBtn.addEventListener("click", () => {
-    switchMode(currentModeIdx);
+    chrome.runtime.sendMessage({ type: "RESET_TIMER" });
 });
 
 skipBtn.addEventListener("click", () => {
     switchMode((currentModeIdx + 1) % DURATIONS.length);
 });
 
-// Timer complete - Log to backend Focus Session API
-async function handleTimerComplete() {
-    pauseTimer();
-    
-    chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
-        if (!res.token) return;
-
-        const duration = DURATIONS[currentModeIdx];
-        const end = new Date();
-        const start = new Date(end.getTime() - duration * 1000);
-        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
-
-        try {
-            await fetch(`${BACKEND_URL}/focus`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${res.token}`
-                },
-                body: JSON.stringify({
-                    taskId: taskSelect.value || null,
-                    sessionType: MODE_NAMES[currentModeIdx],
-                    duration,
-                    startTime: start.toISOString(),
-                    endTime: end.toISOString(),
-                    completed: true,
-                    interruptions: metrics.interruptions || 0,
-                    pauseCount: metrics.pauseCount || 0,
-                    followedSchedule: true,
-                    difficultyRating: 3,
-                    difficultyFeedback: "Normal"
-                })
-            });
-            statusDisplay.innerText = "Session completed and saved to FocusFlow!";
-        } catch (err) {
-            statusDisplay.innerText = "Session completed (failed to sync)";
-        }
-
-        // Reset metrics in storage
-        chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
-    });
-
-    alert(`${MODE_NAMES[currentModeIdx]} finished!`);
-    switchMode((currentModeIdx + 1) % DURATIONS.length);
-}
-
 // Timer Storage Persistence
-function saveTimerState(targetEndTime = null) {
+function saveTimerState() {
     const timerState = {
         isRunning,
         currentModeIdx,
         remainingSeconds,
-        targetEndTime
+        targetEndTime: null
     };
     chrome.storage.local.set({ timerState });
 }
 
-function restoreTimerState(state) {
+function restoreTimerState(state, pausedByDomain = false) {
+    if (!state) return;
     currentModeIdx = state.currentModeIdx;
-    
+    remainingSeconds = state.remainingSeconds;
+    isRunning = state.isRunning;
+
     // Adjust active button
     [modeFocus, modeShort, modeLong].forEach((btn, i) => {
         if (i === currentModeIdx) btn.classList.add("active");
         else btn.classList.remove("active");
     });
 
-    if (state.isRunning && state.targetEndTime) {
-        const left = Math.round((state.targetEndTime - Date.now()) / 1000);
-        if (left <= 0) {
-            remainingSeconds = 0;
-            updateTimerDisplay();
-            handleTimerComplete();
+    updateTimerDisplay();
+
+    if (isRunning) {
+        playBtn.innerText = "⏸";
+        if (pausedByDomain) {
+            statusDisplay.innerText = "Paused - Open allowed work tab!";
+            statusDisplay.style.color = "#f59e0b";
         } else {
-            remainingSeconds = left;
-            isRunning = true;
-            playBtn.innerText = "⏸";
             statusDisplay.innerText = currentModeIdx === 0 ? "⚡ Distraction blocker: active" : "Timer running";
-            
-            timerInterval = setInterval(() => {
-                const innerLeft = Math.round((state.targetEndTime - Date.now()) / 1000);
-                if (innerLeft <= 0) {
-                    clearInterval(timerInterval);
-                    remainingSeconds = 0;
-                    updateTimerDisplay();
-                    handleTimerComplete();
-                } else {
-                    remainingSeconds = innerLeft;
-                    updateTimerDisplay();
-                }
-            }, 1000);
+            statusDisplay.style.color = "";
         }
     } else {
-        remainingSeconds = state.remainingSeconds;
-        updateTimerDisplay();
+        playBtn.innerText = "▶";
+        statusDisplay.innerText = "Timer paused";
+        statusDisplay.style.color = "";
     }
 }
+
+// Receive broadcasts from background.js
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === "TIMER_TICK") {
+        restoreTimerState(message.state, message.pausedByDomain);
+    }
+    return true;
+});
 
 // Collapsible Panel Toggling
 const toggleSettingsBtn = document.getElementById("toggle-settings-btn");
