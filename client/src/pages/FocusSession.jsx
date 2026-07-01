@@ -806,6 +806,11 @@ const FocusSession = () => {
                 <p className="text-[10px] text-[var(--text-muted)] text-center">
                     Timer only runs when active on these websites. (Leave blank to allow all).
                 </p>
+                {!extensionActive && allowedWorkSites && (
+                    <p className="text-[10px] text-amber-500 font-semibold text-center mt-1 animate-pulse">
+                        ⚠️ Allowed sites checking is disabled because the FocusFlow companion extension is not active.
+                    </p>
+                )}
             </div>
 
             {/* Custom Durations Accordion (Phase 23) */}
