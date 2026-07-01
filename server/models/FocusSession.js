@@ -64,6 +64,10 @@ const focusSessionSchema = new mongoose.Schema(
             enum: ["Easy", "Normal", "Difficult"],
             default: "Normal",
         },
+        telemetryAvailable: {
+            type: Boolean,
+            default: false
+        }
     },
     {
         timestamps: true,

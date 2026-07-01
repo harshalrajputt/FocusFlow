@@ -25,6 +25,7 @@ const logSession = async (req, res) => {
             delayedTask,
             difficultyRating,
             difficultyFeedback,
+            telemetryAvailable
         } = req.body;
 
         if (!sessionType || duration === undefined || !startTime || !endTime) {
@@ -51,6 +52,7 @@ const logSession = async (req, res) => {
             delayedTask: delayedTask || false,
             difficultyRating: difficultyRating || 3,
             difficultyFeedback: difficultyFeedback || "Normal",
+            telemetryAvailable: telemetryAvailable !== undefined ? telemetryAvailable : false
         });
 
         // Trigger goal progress if session is a completed Focus session
@@ -418,6 +420,14 @@ const updatePresence = async (req, res) => {
     try {
         const userId = req.user.id;
         const { active, taskLabel } = req.body;
+
+        const user = await User.findById(userId);
+        if (active && user && user.activeSessionStart) {
+            return res.status(409).json({
+                success: false,
+                message: "You already have an active session! Complete it first."
+            });
+        }
 
         const update = active
             ? { activeSessionStart: new Date(), activeTaskLabel: taskLabel || "" }

@@ -63,8 +63,16 @@ function trackCurrentDomain(url) {
     activeStartTime = now;
 }
 
+const APP_DOMAINS = ['focus-flow-flame-five.vercel.app', 'localhost', '127.0.0.1'];
+
+function shouldSkipDomain(domain) {
+    if (!domain) return true;
+    return APP_DOMAINS.some(d => domain.includes(d));
+}
+
 // Save active seconds locally in extension storage
 function accumulateTime(domain, seconds) {
+    if (shouldSkipDomain(domain)) return;
     chrome.storage.local.get(["webUsageLogs"], (res) => {
         const logs = res.webUsageLogs || {};
         logs[domain] = (logs[domain] || 0) + seconds;
@@ -153,6 +161,37 @@ function syncLogsToBackend() {
                 .catch(err => {
                     console.error("Error syncing web logs to backend:", err);
                 });
+            });
+        });
+    });
+}
+
+function updatePresenceInBackend(active, taskLabel = "") {
+    chrome.storage.local.get("token", (res) => {
+        if (!res.token) return;
+        getBackendUrl((backendUrl) => {
+            fetch(`${backendUrl}/focus/presence`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${res.token}`
+                },
+                body: JSON.stringify({ active, taskLabel })
+            })
+            .then(response => {
+                if (response.status === 409 && active) {
+                    // Conflict! Stop the timer immediately and alert the user
+                    pauseTimerInBackground();
+                    chrome.notifications.create({
+                        type: "basic",
+                        iconUrl: "FocusFlowIcon.png",
+                        title: "FocusFlow Warning",
+                        message: "You already have an active session! Complete it first."
+                    });
+                }
+            })
+            .catch(err => {
+                console.error("Error updating presence from background:", err);
             });
         });
     });
@@ -252,7 +291,7 @@ function checkActiveTabForTimerDecrement(callback) {
     });
 }
 
-function startTimerInBackground(duration, modeIdx, tId, allowed) {
+function startTimerInBackground(duration, modeIdx, tId, allowed, taskLabel) {
     clearInterval(timerInterval);
     isTimerRunning = true;
     remainingSeconds = duration;
@@ -261,10 +300,11 @@ function startTimerInBackground(duration, modeIdx, tId, allowed) {
     allowedSites = allowed || [];
     targetEndTime = Date.now() + remainingSeconds * 1000;
 
-    // Enable blocker if starting a Focus session
+    // Enable blocker and backend presence update if starting a Focus session
     if (currentModeIdx === 0) {
         isFocusActive = true;
         blockActiveTabs();
+        updatePresenceInBackend(true, taskLabel || "");
     }
 
     saveTimerStateToStorage();
@@ -302,6 +342,9 @@ function pauseTimerInBackground() {
     clearInterval(timerInterval);
     isTimerRunning = false;
     isFocusActive = false; // Disable blocker
+    if (currentModeIdx === 0) {
+        updatePresenceInBackend(false);
+    }
     saveTimerStateToStorage();
     broadcastStateToTabs();
 }
@@ -310,6 +353,9 @@ function resetTimerInBackground() {
     clearInterval(timerInterval);
     isTimerRunning = false;
     isFocusActive = false;
+    if (currentModeIdx === 0) {
+        updatePresenceInBackend(false);
+    }
     remainingSeconds = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
     saveTimerStateToStorage();
     broadcastStateToTabs();
@@ -318,6 +364,9 @@ function resetTimerInBackground() {
 async function handleTimerCompleteInBackground() {
     isTimerRunning = false;
     isFocusActive = false;
+    if (currentModeIdx === 0) {
+        updatePresenceInBackend(false);
+    }
     saveTimerStateToStorage();
 
     // Broadcast play alarm to open tabs
@@ -370,7 +419,8 @@ async function handleTimerCompleteInBackground() {
                         pauseCount: metrics.pauseCount || 0,
                         followedSchedule: true,
                         difficultyRating: 3,
-                        difficultyFeedback: "Normal"
+                        difficultyFeedback: "Normal",
+                        telemetryAvailable: true
                     })
                 });
                 // Reset metrics in storage
@@ -396,7 +446,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "PING") {
         sendResponse({ type: "PONG" });
     } else if (request.type === "START_TIMER") {
-        startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites);
+        startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites, request.taskLabel);
         sendResponse({
             type: "TIMER_TICK",
             state: {

@@ -286,6 +286,7 @@ function startTimer() {
         duration: remainingSeconds,
         modeIdx: currentModeIdx,
         taskId: taskSelect.value || null,
+        taskLabel: taskSelect.options[taskSelect.selectedIndex]?.text || "",
         allowedSites: allowed
     });
 }

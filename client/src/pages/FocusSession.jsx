@@ -205,6 +205,7 @@ const FocusSession = () => {
     const [focusInput, setFocusInput] = useState(25);
     const [shortInput, setShortInput] = useState(5);
     const [longInput, setLongInput] = useState(15);
+    const [targetEndTime, setTargetEndTime] = useState(null);
 
     const mode = modes[modeIdx];
     const total = mode.duration * 60;
@@ -274,6 +275,7 @@ const FocusSession = () => {
             if (savedState.running && savedState.targetEndTime && savedState.targetEndTime > Date.now()) {
                 setModeIdx(savedState.modeIdx);
                 setStartTime(new Date(savedState.startTime));
+                setTargetEndTime(savedState.targetEndTime);
                 setRunning(true);
                 const durMin = savedState.modeIdx === 0 ? (parsedDurations?.focus || 25) : (savedState.modeIdx === 1 ? (parsedDurations?.short || 5) : (parsedDurations?.long || 15));
                 const modeTotal = durMin * 60;
@@ -355,11 +357,11 @@ const FocusSession = () => {
         if (extensionActive) return; // Extension manages its own background timer persistence
 
         if (running) {
-            const targetEndTime = Date.now() + (total - elapsed) * 1000;
+            const finalEndTime = targetEndTime || (Date.now() + (total - elapsed) * 1000);
             localStorage.setItem("focusflow_timer_state", JSON.stringify({
                 running: true,
                 modeIdx,
-                targetEndTime,
+                targetEndTime: finalEndTime,
                 elapsed,
                 startTime: startTime ? startTime.toISOString() : new Date().toISOString(),
                 allowedWorkSites
@@ -374,7 +376,7 @@ const FocusSession = () => {
                 allowedWorkSites
             }));
         }
-    }, [running, modeIdx, elapsed, startTime, extensionActive, allowedWorkSites, total]);
+    }, [running, modeIdx, elapsed, startTime, extensionActive, allowedWorkSites, total, targetEndTime]);
 
     useEffect(() => {
         const queryParams = new URLSearchParams(window.location.search);
@@ -403,7 +405,8 @@ const FocusSession = () => {
                 missedTask: feedbackData.missedTask || false,
                 delayedTask: feedbackData.delayedTask || false,
                 difficultyRating: feedbackData.rating || 3,
-                difficultyFeedback: feedbackData.difficulty || "Normal"
+                difficultyFeedback: feedbackData.difficulty || "Normal",
+                telemetryAvailable: extensionActive
             };
 
             await logFocusSession(payload);
@@ -433,6 +436,7 @@ const FocusSession = () => {
         const start = startTime || new Date(end.getTime() - durationSecs * 1000);
 
         setCompleted(true);
+        localStorage.removeItem("focusflow_timer_state");
 
         setPendingSession({
             sessionType: currentMode.label,
@@ -453,7 +457,8 @@ const FocusSession = () => {
                 duration: durationSecs,
                 startTime: start,
                 endTime: end,
-                completed: true
+                completed: true,
+                telemetryAvailable: extensionActive
             }).then(() => {
                 setElapsed(0);
                 setStartTime(null);
@@ -464,6 +469,7 @@ const FocusSession = () => {
 
     const logInterruptedSession = () => {
         setCompleted(false);
+        localStorage.removeItem("focusflow_timer_state");
         if (elapsed >= 10 && startTime && modes[modeIdx].label === "Focus") {
             const currentMode = modes[modeIdx];
             const end = new Date();
@@ -494,49 +500,69 @@ const FocusSession = () => {
             if (!startTime) {
                 setStartTime(new Date());
             }
+
+            const mode = modes[modeIdx];
+            const total = mode.duration * 60;
+
+            let currentTarget = targetEndTime;
+            if (!currentTarget) {
+                currentTarget = Date.now() + (total - elapsed) * 1000;
+                setTargetEndTime(currentTarget);
+            }
+
             timer = setInterval(() => {
-                setElapsed((prev) => {
-                    const nextElapsed = prev + 1;
-                    const mode = modes[modeIdx];
-                    const total = mode.duration * 60;
-                    if (nextElapsed >= total) {
-                        clearInterval(timer);
-                        setRunning(false);
-                        handleSessionComplete(total);
-                        try {
-                            const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
-                            audio.play();
-                        } catch (e) {}
-                        return total;
-                    }
-                    return nextElapsed;
-                });
-            }, 1000);
+                const remaining = Math.max(0, currentTarget - Date.now());
+                const remainingSecs = Math.ceil(remaining / 1000);
+                const nextElapsed = total - remainingSecs;
+
+                setElapsed(nextElapsed);
+
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    setRunning(false);
+                    setTargetEndTime(null);
+                    handleSessionComplete(total);
+                    try {
+                        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
+                        audio.play();
+                    } catch (e) {}
+                }
+            }, 500);
         } else {
             clearInterval(timer);
         }
         return () => clearInterval(timer);
-    }, [running, modeIdx, startTime, selectedTaskId, extensionActive, modes]);
+    }, [running, modeIdx, startTime, selectedTaskId, extensionActive, modes, targetEndTime]);
 
-    const handlePlayPause = () => {
+    const handlePlayPause = async () => {
         if (!running) {
             setCompleted(false);
             // Announce to pod members that a focus session is starting
             if (modes[modeIdx].label === "Focus") {
-                const task = tasks.find(t => t._id === selectedTaskId);
-                const label = task?.shareWithPod !== false ? (task?.title || "") : "";
-                updatePresence(true, label).catch(() => {});
+                try {
+                    const task = tasks.find(t => t._id === selectedTaskId);
+                    const label = task?.shareWithPod !== false ? (task?.title || "") : "";
+                    await updatePresence(true, label);
+                } catch (err) {
+                    if (err.response && err.response.status === 409) {
+                        alert("You already have an active session! Complete it first.");
+                        return;
+                    }
+                    console.error("Error setting active presence:", err);
+                }
             }
 
             if (extensionActive) {
                 localStorage.setItem("allowedWorkSites", allowedWorkSites);
                 const allowed = allowedWorkSites.split(",").map(s => s.trim()).filter(Boolean);
+                const task = tasks.find(t => t._id === selectedTaskId);
                 window.postMessage({
                     source: "focusflow-webapp",
                     type: "START_TIMER",
                     duration: total - elapsed,
                     modeIdx,
                     taskId: selectedTaskId || null,
+                    taskLabel: task?.title || "",
                     allowedSites: allowed
                 }, "*");
             }
@@ -547,6 +573,10 @@ const FocusSession = () => {
             if (extensionActive) {
                 window.postMessage({ source: "focusflow-webapp", type: "PAUSE_TIMER" }, "*");
             }
+            setTargetEndTime(null);
+            if (modes[modeIdx].label === "Focus") {
+                updatePresence(false).catch(() => {});
+            }
         }
         
         if (!extensionActive) {
@@ -556,6 +586,7 @@ const FocusSession = () => {
 
     const switchMode = (i) => {
         setCompleted(false);
+        localStorage.removeItem("focusflow_timer_state");
         if (running) {
             logInterruptedSession();
         }
@@ -566,6 +597,7 @@ const FocusSession = () => {
         setRunning(false);
         setElapsed(0);
         setStartTime(null);
+        setTargetEndTime(null);
         setPausedByDomain(false);
     };
 
@@ -594,12 +626,15 @@ const FocusSession = () => {
         
         if (!running) {
             setElapsed(0);
+            setTargetEndTime(null);
+            localStorage.removeItem("focusflow_timer_state");
         }
         setShowDurationsConfig(false);
     };
 
     const handleReset = () => {
         setCompleted(false);
+        localStorage.removeItem("focusflow_timer_state");
         if (running) {
             logInterruptedSession();
         } else {
@@ -612,12 +647,14 @@ const FocusSession = () => {
             window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
         }
         setRunning(false);
+        setTargetEndTime(null);
         setPausedByDomain(false);
         // Clear presence on manual reset
         updatePresence(false).catch(() => {});
     };
 
     const handleSkip = () => {
+        localStorage.removeItem("focusflow_timer_state");
         if (running) {
             logInterruptedSession();
         } else {
@@ -630,6 +667,7 @@ const FocusSession = () => {
             window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
         }
         setRunning(false);
+        setTargetEndTime(null);
         setPausedByDomain(false);
         setModeIdx((modeIdx + 1) % modes.length);
     };
@@ -763,10 +801,10 @@ const FocusSession = () => {
                         onClick={() => setInterruptions(prev => prev + 1)}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-red-500/25 bg-red-500/5 hover:bg-red-500/10 text-red-400 text-xs font-semibold tracking-wider transition-colors cursor-pointer"
                     >
-                        ⚡ Log Distraction ({interruptions})
+                        ⚡ Got Distracted ×{interruptions}
                     </button>
                     <p className="text-[10px] text-[var(--text-muted)] text-center max-w-xs leading-relaxed">
-                        Log momentary distractions during study. This helps the FocusFlow ML Engine refine your dynamic daily burnout risk.
+                        Tap whenever you get pulled away — helps your AI coach learn your patterns.
                     </p>
                 </div>
             )}
