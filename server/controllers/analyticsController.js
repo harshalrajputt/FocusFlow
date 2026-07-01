@@ -3,6 +3,7 @@ const FocusSession = require("../models/FocusSession");
 const UserProfile = require("../models/UserProfile");
 const WeeklyWebsiteUsage = require("../models/WeeklyWebsiteUsage");
 const MonthlyWebsiteUsage = require("../models/MonthlyWebsiteUsage");
+const Task = require("../models/Task");
 
 // Get Monday of the date's week (YYYY-MM-DD)
 function getWeekStartDate(dateStr) {
@@ -126,7 +127,7 @@ const getInsights = async (req, res) => {
         const totalFocusMinutes = Math.round(totalDuration / 60);
         
         const avgSessionDuration = totalSessions > 0 ? Math.round((totalDuration / totalSessions) / 60) : 0;
-        const tasksCompletedCount = completedSessions; // baseline
+        const tasksCompletedCount = await Task.countDocuments({ userId, status: "Completed" });
 
         // Calculate focus minutes per day for last 7 days
         const last7DaysData = {};
