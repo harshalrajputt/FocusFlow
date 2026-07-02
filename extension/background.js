@@ -82,7 +82,7 @@ function accumulateTime(domain, seconds) {
 
 // Environment Discovery helper
 function getBackendUrl(callback) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
         let url = "https://focusflow-backend-liuf.onrender.com/api";
         if (tabs && tabs[0] && tabs[0].url) {
             const pageUrl = tabs[0].url;
@@ -97,7 +97,7 @@ function getBackendUrl(callback) {
 // Send accumulated logs to backend
 function syncLogsToBackend() {
     // Flush current domain time first to capture latest active session seconds
-    chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (activeTabs) => {
         if (activeTabs && activeTabs[0]) {
             trackCurrentDomain(activeTabs[0].url);
         } else {
@@ -251,13 +251,32 @@ function broadcastStateToTabs(extra = {}) {
     });
 }
 
+function getDomainFromInput(input) {
+    if (!input) return "";
+    let clean = input.trim().toLowerCase();
+    
+    if (clean.startsWith("http://")) clean = clean.substring(7);
+    if (clean.startsWith("https://")) clean = clean.substring(8);
+    
+    const slashIdx = clean.indexOf("/");
+    if (slashIdx !== -1) {
+        clean = clean.substring(0, slashIdx);
+    }
+    
+    if (clean.startsWith("www.")) {
+        clean = clean.substring(4);
+    }
+    
+    return clean;
+}
+
 function checkActiveTabForTimerDecrement(callback) {
     if (!allowedSites || allowedSites.length === 0) {
         callback(true);
         return;
     }
 
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
         if (!tabs || tabs.length === 0) {
             callback(false);
             return;
@@ -270,7 +289,7 @@ function checkActiveTabForTimerDecrement(callback) {
                 return;
             }
             const urlObj = new URL(url);
-            const domain = urlObj.hostname.replace("www.", "");
+            const domain = urlObj.hostname.replace("www.", "").toLowerCase();
 
             // Always allow chrome-extension internal settings pages
             if (url.startsWith("chrome-extension://")) {
@@ -280,7 +299,7 @@ function checkActiveTabForTimerDecrement(callback) {
 
             // Check if domain matches any of the allowed sites
             const isMatch = allowedSites.some(site => {
-                const cleanSite = site.trim().replace("www.", "");
+                const cleanSite = getDomainFromInput(site);
                 return cleanSite && domain.includes(cleanSite);
             });
 
@@ -608,7 +627,7 @@ chrome.idle.onStateChanged.addListener((state) => {
     if (state === "idle" || state === "locked") {
         trackCurrentDomain(null);
     } else if (state === "active") {
-        chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+        chrome.tabs.query({ active: true, lastFocusedWindow: true }, (activeTabs) => {
             if (activeTabs && activeTabs[0] && activeTabs[0].url) {
                 trackCurrentDomain(activeTabs[0].url);
             }
@@ -617,7 +636,7 @@ chrome.idle.onStateChanged.addListener((state) => {
 });
 
 // Initial load check
-chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+chrome.tabs.query({ active: true, lastFocusedWindow: true }, (activeTabs) => {
     if (activeTabs && activeTabs[0] && activeTabs[0].url) {
         trackCurrentDomain(activeTabs[0].url);
     }
