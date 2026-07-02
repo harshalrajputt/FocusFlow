@@ -17,6 +17,7 @@ import Onboarding from "./pages/Onboarding";
 import Schedule from "./pages/Schedule";
 import Pods from "./pages/Pods";
 import Flashcards from "./pages/Flashcards";
+import NotFound from "./pages/NotFound";
 
 import { useEffect } from "react";
 import { applyAppearanceSettings } from "./utils/theme";
@@ -113,6 +114,8 @@ function App() {
 
           </Route>
         </Route>
+
+        <Route path="*" element={<NotFound />} />
 
       </Routes>
     </BrowserRouter>
