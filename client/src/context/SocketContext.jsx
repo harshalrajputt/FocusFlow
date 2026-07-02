@@ -45,6 +45,23 @@ export function SocketProvider({ children }) {
             console.warn("Socket connection error:", err.message);
         });
 
+        socket.on("notification:new", (data) => {
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification(data.title || "FocusFlow Alert ⚡", {
+                        body: data.message || "",
+                        icon: "/favicon.png"
+                    });
+                } catch (e) {
+                    console.error("Failed to fire native notification:", e);
+                }
+            }
+        });
+
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+
         socketRef.current = socket;
 
         return () => {

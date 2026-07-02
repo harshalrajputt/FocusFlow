@@ -6,7 +6,33 @@ const PodRivalry = require("../models/PodRivalry");
 const User = require("../models/User");
 const FocusSession = require("../models/FocusSession");
 const Notification = require("../models/Notification");
-const { emitToPod } = require("../socket/socketHandler");
+const { emitToPod, emitToUser } = require("../socket/socketHandler");
+
+async function createAndEmitNotification(io, userId, notificationPayload) {
+    try {
+        const notif = await Notification.create({
+            userId,
+            ...notificationPayload
+        });
+        emitToUser(io, userId, "notification:new", notif);
+        return notif;
+    } catch (e) {
+        console.error("Failed to create/emit notification:", e);
+    }
+}
+
+async function createAndEmitNotifications(io, notificationsList) {
+    try {
+        if (!notificationsList || notificationsList.length === 0) return [];
+        const notifs = await Notification.insertMany(notificationsList);
+        notifs.forEach(notif => {
+            emitToUser(io, notif.userId, "notification:new", notif);
+        });
+        return notifs;
+    } catch (e) {
+        console.error("Failed to create/emit multiple notifications:", e);
+    }
+}
 
 // Create a Pod
 const createPod = async (req, res) => {
@@ -171,8 +197,7 @@ const inviteMember = async (req, res) => {
 
         // Send a notification to recipient user
         const fromUser = await User.findById(fromUserId);
-        await Notification.create({
-            userId: toUserId,
+        await createAndEmitNotification(req.io, toUserId, {
             title: `Pod Invitation from ${fromUser.name}`,
             message: `${fromUser.name} invited you to join the pod "${pod.name}".`,
             type: "pod",
@@ -280,7 +305,7 @@ const respondToInvite = async (req, res) => {
             }));
 
         if (notifications.length > 0) {
-            await Notification.insertMany(notifications);
+            await createAndEmitNotifications(req.io, notifications);
         }
 
         return res.status(200).json({ success: true, message: "Invitation accepted. Welcome to the pod!" });
@@ -347,7 +372,7 @@ const leavePod = async (req, res) => {
                 type: "pod",
                 read: false
             }));
-        await Notification.insertMany(notifications);
+        await createAndEmitNotifications(req.io, notifications);
 
         return res.status(200).json({ success: true, message: "Left pod successfully." });
     } catch (error) {
@@ -396,8 +421,7 @@ const sendNudge = async (req, res) => {
             message = `${fromUser.name} poked you! Time to get to work!`;
         }
 
-        await Notification.create({
-            userId: toUserId,
+        await createAndEmitNotification(req.io, toUserId, {
             title,
             message,
             type: "pod",
@@ -475,7 +499,7 @@ const createChallenge = async (req, res) => {
             }));
 
         if (notifications.length > 0) {
-            await Notification.insertMany(notifications);
+            await createAndEmitNotifications(req.io, notifications);
         }
 
         return res.status(201).json({ success: true, challenge: pod.challenges[pod.challenges.length - 1] });
@@ -669,7 +693,7 @@ const startSprint = async (req, res) => {
                 type: "pod",
                 read: false
             }));
-        if (notifications.length > 0) await Notification.insertMany(notifications);
+        if (notifications.length > 0) await createAndEmitNotifications(req.io, notifications);
 
         // Emit real-time sprint event
         const populatedSprint = await PodSprint.findById(sprint._id)
@@ -800,10 +824,9 @@ const challengeRival = async (req, res) => {
         const challenger = await User.findById(userId).select("name");
 
         // Notify rival pod leader
-        await Notification.create({
-            userId: rivalPod.leaderId,
+        await createAndEmitNotification(req.io, rivalPod.leaderId, {
             title: `⚔️ Pod Challenge from "${myPod.name}"!`,
-            message: `"${myPod.name}" has challenged your pod to a 7-day XP battle! Accept or decline in Social Pods.`,
+            message: `` + `"${myPod.name}" has challenged your pod to a 7-day XP battle! Accept or decline in Social Pods.`,
             type: "pod",
             read: false
         });
@@ -865,7 +888,7 @@ const respondToRivalChallenge = async (req, res) => {
                 type: "pod",
                 read: false
             }));
-        await Notification.insertMany([...challengerNotifs, ...challengedNotifs]);
+        await createAndEmitNotifications(req.io, [...challengerNotifs, ...challengedNotifs]);
 
         // Emit to both pod rooms
         const populatedRivalry = await PodRivalry.findById(rivalryId)
