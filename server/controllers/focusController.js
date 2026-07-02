@@ -78,10 +78,10 @@ const logSession = async (req, res) => {
                     startTime: { $gte: startOfToday }
                 });
 
-                // Award 10 XP if user hasn't completed more than 10 sessions today
+                // Award time-dependent XP: 1 XP for every 2.5 minutes (150 seconds) focused, capped at 10 XP per session
                 let xpEarned = 0;
                 if (completedTodayCount <= 10) {
-                    xpEarned = 10;
+                    xpEarned = Math.min(10, Math.floor(duration / 150));
                 }
 
                 // Update User's profile XP & Streaks
@@ -105,6 +105,13 @@ const logSession = async (req, res) => {
                 if (user) {
                     const userPods = await Pod.find({ "members.userId": req.user.id });
                     for (const pod of userPods) {
+                        const minMinutes = pod.minSessionDuration !== undefined ? pod.minSessionDuration : 10;
+                        const durationInMinutes = duration / 60;
+                        if (durationInMinutes < minMinutes) {
+                            console.log(`Session duration (${durationInMinutes} mins) is less than Pod "${pod.name}" minimum constraint (${minMinutes} mins). Skipping pod progress.`);
+                            continue;
+                        }
+
                         // 1. Update challenges
                         if (xpEarned > 0) {
                             pod.challenges.forEach(challenge => {

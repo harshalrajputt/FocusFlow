@@ -903,6 +903,38 @@ const getRivalryStatus = async (req, res) => {
     }
 };
 
+const updatePodSettings = async (req, res) => {
+    try {
+        const { podId } = req.params;
+        const { minSessionDuration } = req.body;
+        const userId = req.user.id;
+
+        const pod = await Pod.findById(podId);
+        if (!pod) {
+            return res.status(404).json({ success: false, message: "Pod not found." });
+        }
+
+        if (pod.leaderId.toString() !== userId) {
+            return res.status(403).json({ success: false, message: "Only the pod leader can update settings." });
+        }
+
+        if (minSessionDuration !== undefined) {
+            const minSecs = Number(minSessionDuration);
+            if (isNaN(minSecs) || minSecs < 0) {
+                return res.status(400).json({ success: false, message: "Invalid minimum session duration." });
+            }
+            pod.minSessionDuration = minSecs;
+        }
+
+        await pod.save();
+
+        return res.status(200).json({ success: true, pod });
+    } catch (error) {
+        console.error("Update pod settings error:", error);
+        return res.status(500).json({ success: false, message: "Server error updating pod settings." });
+    }
+};
+
 module.exports = {
     createPod,
     getUserPods,
@@ -920,5 +952,6 @@ module.exports = {
     getActiveSprint,
     challengeRival,
     respondToRivalChallenge,
-    getRivalryStatus
+    getRivalryStatus,
+    updatePodSettings
 };

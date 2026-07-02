@@ -40,3 +40,4 @@ export const getActiveSprint = (podId) => API.get(`/${podId}/sprints/active`);
 export const challengeRival = (podId, rivalPodId) => API.post(`/${podId}/rival-challenge`, { rivalPodId });
 export const respondToRivalChallenge = (rivalryId, accept) => API.post(`/rivalries/${rivalryId}/respond`, { accept });
 export const getRivalryStatus = (podId) => API.get(`/${podId}/rivalry`);
+export const updatePodSettings = (podId, settingsData) => API.put(`/${podId}/settings`, settingsData);

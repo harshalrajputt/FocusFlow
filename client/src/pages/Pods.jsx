@@ -17,7 +17,8 @@ import {
     getActiveSprint,
     challengeRival,
     respondToRivalChallenge,
-    getRivalryStatus
+    getRivalryStatus,
+    updatePodSettings
 } from "../services/podService";
 import { searchUsers } from "../services/authService";
 import { useSocket } from "../context/SocketContext";
@@ -103,6 +104,7 @@ export default function Pods() {
     const [rivalOpen, setRivalOpen] = useState(false);
     const [rivalPodId, setRivalPodId] = useState("");
     const [rivalLoading, setRivalLoading] = useState(false);
+    const [minDurationVal, setMinDurationVal] = useState(null);
 
     // Track reactions locally for optimistic updates
     const [localReactions, setLocalReactions] = useState({}); // { activityId: [{userId, emoji}] }
@@ -168,6 +170,7 @@ export default function Pods() {
     const fetchPodDetails = useCallback(async (podId) => {
         if (!podId) return;
         setPodLoading(true);
+        setMinDurationVal(null);
         try {
             const res = await getPodDetails(podId);
             setPodDetails(res.data.pod);
@@ -347,6 +350,19 @@ export default function Pods() {
         } catch (err) {
             console.error("Invite member error:", err);
             showToast(err.response?.data?.message || "Failed to invite member.", "error");
+        }
+    };
+
+    const savePodSettings = async () => {
+        if (!selectedPodId) return;
+        const durationLimit = minDurationVal ?? podDetails?.minSessionDuration ?? 10;
+        try {
+            const res = await updatePodSettings(selectedPodId, { minSessionDuration: durationLimit });
+            setPodDetails(res.data.pod);
+            showToast("Pod threshold updated successfully!");
+        } catch (err) {
+            console.error("Save pod settings error:", err);
+            showToast(err.response?.data?.message || "Failed to update pod settings.", "error");
         }
     };
 
@@ -818,6 +834,33 @@ export default function Pods() {
                                             </button>
                                         )}
                                     </div>
+
+                                    {podDetails.leaderId?._id?.toString() === currentUser._id?.toString() && (
+                                        <div className="flex flex-col gap-2 mt-4 p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                                🛡️ Leader Setting: Min Session Duration (mins)
+                                            </label>
+                                            <div className="flex gap-2 items-center">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="120"
+                                                    value={minDurationVal !== null ? minDurationVal : (podDetails.minSessionDuration ?? 10)}
+                                                    onChange={(e) => setMinDurationVal(Number(e.target.value))}
+                                                    className="w-20 px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] text-slate-805 dark:text-slate-100 text-xs outline-none"
+                                                />
+                                                <button
+                                                    onClick={savePodSettings}
+                                                    className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer"
+                                                >
+                                                    Save Threshold
+                                                </button>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400">
+                                                Sessions shorter than this will not count towards Pod streaks, challenges, or rivalries.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Active Sprint Room Banner */}

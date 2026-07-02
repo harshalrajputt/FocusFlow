@@ -270,6 +270,10 @@ const FocusSession = () => {
             setLongInput(parsedDurations.long);
         }
 
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+
         // Restore standalone timer state if active on last reload
         const savedStateStr = localStorage.getItem("focusflow_timer_state");
         if (savedStateStr) {
@@ -480,6 +484,13 @@ const FocusSession = () => {
         setCompleted(true);
         localStorage.removeItem("focusflow_timer_state");
         playAlarm();
+
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("FocusFlow Alert ⚡", {
+                body: `${currentMode.label} block completed! Take a step back and breathe.`,
+                icon: "/favicon.png"
+            });
+        }
 
         setPendingSession({
             sessionType: currentMode.label,

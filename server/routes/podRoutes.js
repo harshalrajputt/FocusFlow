@@ -18,7 +18,8 @@ const {
     getActiveSprint,
     challengeRival,
     respondToRivalChallenge,
-    getRivalryStatus
+    getRivalryStatus,
+    updatePodSettings
 } = require("../controllers/podController");
 
 router.use(protect);
@@ -30,6 +31,7 @@ router.post("/invites/:inviteId/respond", respondToInvite);
 router.post("/rivalries/:rivalryId/respond", respondToRivalChallenge);
 
 router.get("/:podId", getPodDetails);
+router.put("/:podId/settings", updatePodSettings);
 router.post("/:podId/invite", inviteMember);
 router.post("/:podId/leave", leavePod);
 router.post("/:podId/nudge", sendNudge);

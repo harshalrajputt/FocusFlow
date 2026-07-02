@@ -20,6 +20,10 @@ const podSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        minSessionDuration: {
+            type: Number,
+            default: 10
+        },
         lastActiveDate: {
             type: String,
             default: ""

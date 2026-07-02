@@ -310,7 +310,7 @@ function checkActiveTabForTimerDecrement(callback) {
     });
 }
 
-function startTimerInBackground(duration, modeIdx, tId, allowed, taskLabel) {
+function startTimerInBackground(duration, modeIdx, tId, allowed, taskLabel, skipPresenceUpdate) {
     clearInterval(timerInterval);
     isTimerRunning = true;
     remainingSeconds = duration;
@@ -323,7 +323,9 @@ function startTimerInBackground(duration, modeIdx, tId, allowed, taskLabel) {
     if (currentModeIdx === 0) {
         isFocusActive = true;
         blockActiveTabs();
-        updatePresenceInBackend(true, taskLabel || "");
+        if (!skipPresenceUpdate) {
+            updatePresenceInBackend(true, taskLabel || "");
+        }
     }
 
     saveTimerStateToStorage();
@@ -473,7 +475,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "PING") {
         sendResponse({ type: "PONG" });
     } else if (request.type === "START_TIMER") {
-        startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites, request.taskLabel);
+        const skipPresenceUpdate = request.source === "focusflow-webapp";
+        startTimerInBackground(request.duration, request.modeIdx, request.taskId, request.allowedSites, request.taskLabel, skipPresenceUpdate);
         sendResponse({
             type: "TIMER_TICK",
             state: {
