@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { logFocusSession, getFocusSummary, updatePresence } from "../services/focusService";
 import { getTasks } from "../services/taskService";
 import Timer3DVisual from "../components/layout/Timer3DVisual";
@@ -206,6 +206,8 @@ const FocusSession = () => {
     const [shortInput, setShortInput] = useState(5);
     const [longInput, setLongInput] = useState(15);
     const [targetEndTime, setTargetEndTime] = useState(null);
+    const [alarmPlaying, setAlarmPlaying] = useState(false);
+    const alarmAudioRef = useRef(null);
 
     const mode = modes[modeIdx];
     const total = mode.duration * 60;
@@ -308,6 +310,7 @@ const FocusSession = () => {
                     }
                     const state = message.state;
                     if (state) {
+                        const isFinished = running && !state.isRunning && state.remainingSeconds === 0;
                         setRunning(state.isRunning);
                         setModeIdx(state.currentModeIdx);
                         const savedDurs = localStorage.getItem("focusflow_custom_durations");
@@ -322,15 +325,26 @@ const FocusSession = () => {
                         if (state.allowedSites && state.allowedSites.length > 0) {
                             setAllowedWorkSites(state.allowedSites.join(", "));
                         }
+                        if (isFinished) {
+                            handleSessionComplete(durationSec);
+                        }
                     }
                 } else if (message.type === "PLAY_ALARM") {
-                    try {
-                        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
-                        audio.play();
-                    } catch (e) {
-                        console.error("Failed to play alarm audio", e);
-                    }
+                    playAlarm();
+                    
+                    const savedDurs = localStorage.getItem("focusflow_custom_durations");
+                    const parsedDurs = savedDurs ? JSON.parse(savedDurs) : { focus: 25, short: 5, long: 15 };
+                    const currentModeIdx = message.modeIdx !== undefined ? message.modeIdx : modeIdx;
+                    const durMin = currentModeIdx === 0 ? parsedDurs.focus : (currentModeIdx === 1 ? parsedDurs.short : parsedDurs.long);
+                    
+                    handleSessionComplete(durMin * 60);
                     fetchSummary();
+                } else if (message.type === "STOP_ALARM") {
+                    if (alarmAudioRef.current) {
+                        alarmAudioRef.current.pause();
+                        alarmAudioRef.current = null;
+                    }
+                    setAlarmPlaying(false);
                 }
             }
         };
@@ -412,6 +426,7 @@ const FocusSession = () => {
             await logFocusSession(payload);
             
             // Clean up session states
+            stopAlarm();
             setElapsed(0);
             setStartTime(null);
             setPauseCount(0);
@@ -422,6 +437,33 @@ const FocusSession = () => {
             fetchSummary();
         } catch (error) {
             console.error("Error logging focus session with feedback", error);
+        }
+    };
+
+    const playAlarm = () => {
+        try {
+            if (alarmAudioRef.current) {
+                alarmAudioRef.current.pause();
+                alarmAudioRef.current = null;
+            }
+            const audio = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
+            audio.loop = true;
+            alarmAudioRef.current = audio;
+            audio.play().catch(() => {});
+            setAlarmPlaying(true);
+        } catch (e) {
+            console.error("Failed to play alarm", e);
+        }
+    };
+
+    const stopAlarm = () => {
+        if (alarmAudioRef.current) {
+            alarmAudioRef.current.pause();
+            alarmAudioRef.current = null;
+        }
+        setAlarmPlaying(false);
+        if (extensionActive) {
+            window.postMessage({ source: "focusflow-webapp", type: "STOP_ALARM" }, "*");
         }
     };
 
@@ -437,6 +479,7 @@ const FocusSession = () => {
 
         setCompleted(true);
         localStorage.removeItem("focusflow_timer_state");
+        playAlarm();
 
         setPendingSession({
             sessionType: currentMode.label,
@@ -591,7 +634,7 @@ const FocusSession = () => {
             logInterruptedSession();
         }
         if (extensionActive) {
-            window.postMessage({ source: "focusflow-webapp", type: "RESET_TIMER" }, "*");
+            window.postMessage({ source: "focusflow-webapp", type: "CHANGE_MODE", modeIdx: i }, "*");
         }
         setModeIdx(i);
         setRunning(false);
@@ -756,40 +799,50 @@ const FocusSession = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="flex items-center gap-5">
-                    {/* Reset */}
-                    <button
-                        onClick={handleReset}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
-                    </button>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-5">
+                        {/* Reset */}
+                        <button
+                            onClick={handleReset}
+                            className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
+                        </button>
 
-                    {/* Play/Pause */}
-                    <button
-                        onClick={handlePlayPause}
-                        className="w-[70px] h-[70px] flex items-center justify-center rounded-full text-white transition-all duration-200 cursor-pointer"
-                        style={{
-                            background: `linear-gradient(135deg, ${mode.ringColor}, ${mode.ringColor === '#0284c7' ? '#0d9488' : mode.ringColor === '#0d9488' ? '#0f766e' : '#02507d'})`,
-                            boxShadow: `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.07)'; e.currentTarget.style.boxShadow = `0 0 0 12px ${mode.ringColor}22, 0 12px 32px ${mode.ringGlow}`; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`; }}
-                    >
-                        {running ? (
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                        ) : (
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 3 }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        )}
-                    </button>
+                        {/* Play/Pause */}
+                        <button
+                            onClick={handlePlayPause}
+                            className="w-[70px] h-[70px] flex items-center justify-center rounded-full text-white transition-all duration-200 cursor-pointer"
+                            style={{
+                                background: `linear-gradient(135deg, ${mode.ringColor}, ${mode.ringColor === '#0284c7' ? '#0d9488' : mode.ringColor === '#0d9488' ? '#0f766e' : '#02507d'})`,
+                                boxShadow: `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.07)'; e.currentTarget.style.boxShadow = `0 0 0 12px ${mode.ringColor}22, 0 12px 32px ${mode.ringGlow}`; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = `0 0 0 8px ${mode.ringColor}18, 0 8px 24px ${mode.ringGlow}`; }}
+                        >
+                            {running ? (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                            ) : (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 3 }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            )}
+                        </button>
 
-                    {/* Skip */}
-                    <button
-                        onClick={handleSkip}
-                        className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-                    </button>
+                        {/* Skip */}
+                        <button
+                            onClick={handleSkip}
+                            className="w-12 h-12 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)] hover:border-[var(--border-hover)] bg-[var(--bg-secondary)] transition-all duration-200 cursor-pointer"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                        </button>
+                    </div>
+                    {alarmPlaying && (
+                        <button
+                            onClick={stopAlarm}
+                            className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider animate-pulse transition-all cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                        >
+                            🛑 Stop Alarm
+                        </button>
+                    )}
                 </div>
             </div>
 

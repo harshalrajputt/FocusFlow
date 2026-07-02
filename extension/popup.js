@@ -248,7 +248,7 @@ function switchMode(idx) {
         else btn.classList.remove("active");
     });
     
-    chrome.runtime.sendMessage({ type: "RESET_TIMER" });
+    chrome.runtime.sendMessage({ type: "CHANGE_MODE", modeIdx: idx });
     saveTimerState();
 }
 
@@ -341,6 +341,7 @@ function restoreTimerState(state, pausedByDomain = false) {
 
     // Disable configurations while running to prevent conflicts
     const allowedSitesInput = document.getElementById("allowed-work-sites");
+    const alarmBanner = document.getElementById("alarm-banner");
     if (isRunning) {
         playBtn.innerText = "⏸";
         if (pausedByDomain) {
@@ -356,10 +357,18 @@ function restoreTimerState(state, pausedByDomain = false) {
         modeLong.disabled = true;
         taskSelect.disabled = true;
         if (allowedSitesInput) allowedSitesInput.disabled = true;
+        if (alarmBanner) alarmBanner.style.display = "none";
     } else {
         playBtn.innerText = "▶";
-        statusDisplay.innerText = "Timer paused";
-        statusDisplay.style.color = "";
+        if (remainingSeconds === 0) {
+            statusDisplay.innerText = "Session Completed!";
+            statusDisplay.style.color = "#10b981";
+            if (alarmBanner) alarmBanner.style.display = "block";
+        } else {
+            statusDisplay.innerText = "Timer paused";
+            statusDisplay.style.color = "";
+            if (alarmBanner) alarmBanner.style.display = "none";
+        }
 
         modeFocus.disabled = false;
         modeShort.disabled = false;
@@ -438,6 +447,22 @@ document.getElementById("save-settings-btn").addEventListener("click", () => {
         alert("Configuration saved successfully!");
         settingsPanel.style.display = "none";
         toggleSettingsBtn.innerText = "⚙ Configure Settings";
-    });
 });
+
+// Dismiss alarm button click listener
+const dismissAlarmBtn = document.getElementById("dismiss-alarm-btn");
+if (dismissAlarmBtn) {
+    dismissAlarmBtn.addEventListener("click", () => {
+        // Send stop alarm message to silence beep audios
+        chrome.runtime.sendMessage({ type: "STOP_ALARM" });
+        
+        // Cycle mode: if focus completed, shift to Short Break. If break completed, switch back to Focus.
+        const nextModeIdx = currentModeIdx === 0 ? 1 : 0;
+        switchMode(nextModeIdx);
+        
+        // Hide the banner
+        const alarmBanner = document.getElementById("alarm-banner");
+        if (alarmBanner) alarmBanner.style.display = "none";
+    });
+}
 

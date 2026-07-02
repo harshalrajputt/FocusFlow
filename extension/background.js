@@ -114,7 +114,7 @@ function syncLogsToBackend() {
                 let category = null;
                 if (isTimerRunning && allowedSites && allowedSites.length > 0) {
                     const isMatch = allowedSites.some(site => {
-                        const cleanSite = site.trim().replace("www.", "").toLowerCase();
+                        const cleanSite = getDomainFromInput(site);
                         return cleanSite && domain.toLowerCase().includes(cleanSite);
                     });
                     if (isMatch) {
@@ -410,43 +410,51 @@ async function handleTimerCompleteInBackground() {
         if (chrome.runtime.lastError) {}
     });
 
-    // Save session logs to Backend
-    chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
-        if (!res.token) return;
+    // Save session logs to Backend (Only if FocusFlow web app page is not open)
+    chrome.tabs.query({}, (tabs) => {
+        const isWebAppOpen = tabs.some(tab => tab.url && (tab.url.includes("localhost:5173") || tab.url.includes("focus-flow-flame-five.vercel.app")));
+        if (isWebAppOpen) {
+            console.log("FocusFlow webapp is open. Letting the webpage handle the session logging.");
+            return;
+        }
 
-        const duration = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
-        const end = new Date();
-        const start = new Date(end.getTime() - duration * 1000);
-        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
+        chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
+            if (!res.token) return;
 
-        getBackendUrl(async (backendUrl) => {
-            try {
-                await fetch(`${backendUrl}/focus`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${res.token}`
-                    },
-                    body: JSON.stringify({
-                        taskId: taskId || null,
-                        sessionType: currentModeIdx === 0 ? "Focus" : (currentModeIdx === 1 ? "Short Break" : "Long Break"),
-                        duration,
-                        startTime: start.toISOString(),
-                        endTime: end.toISOString(),
-                        completed: true,
-                        interruptions: metrics.interruptions || 0,
-                        pauseCount: metrics.pauseCount || 0,
-                        followedSchedule: true,
-                        difficultyRating: 3,
-                        difficultyFeedback: "Normal",
-                        telemetryAvailable: true
-                    })
-                });
-                // Reset metrics in storage
-                chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
-            } catch (err) {
-                console.error("Failed to auto-save completed session from background:", err);
-            }
+            const duration = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+            const end = new Date();
+            const start = new Date(end.getTime() - duration * 1000);
+            const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
+
+            getBackendUrl(async (backendUrl) => {
+                try {
+                    await fetch(`${backendUrl}/focus`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${res.token}`
+                        },
+                        body: JSON.stringify({
+                            taskId: taskId || null,
+                            sessionType: currentModeIdx === 0 ? "Focus" : (currentModeIdx === 1 ? "Short Break" : "Long Break"),
+                            duration,
+                            startTime: start.toISOString(),
+                            endTime: end.toISOString(),
+                            completed: true,
+                            interruptions: metrics.interruptions || 0,
+                            pauseCount: metrics.pauseCount || 0,
+                            followedSchedule: true,
+                            difficultyRating: 3,
+                            difficultyFeedback: "Normal",
+                            telemetryAvailable: true
+                        })
+                    });
+                    // Reset metrics in storage
+                    chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
+                } catch (err) {
+                    console.error("Failed to auto-save completed session from background:", err);
+                }
+            });
         });
     });
 }
@@ -496,11 +504,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 remainingSeconds: currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60)
             }
         });
+    } else if (request.type === "CHANGE_MODE") {
+        currentModeIdx = request.modeIdx;
+        isFocusActive = false;
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        if (currentModeIdx === 0) {
+            updatePresenceInBackend(false);
+        }
+        chrome.storage.local.get("customSettings", (res) => {
+            const settings = res.customSettings || { focusTime: 25, shortTime: 5, longTime: 15 };
+            const focusVal = settings.focusTime || 25;
+            const shortVal = settings.shortTime || 5;
+            const longVal = settings.longTime || 15;
+            
+            remainingSeconds = currentModeIdx === 0 ? focusVal * 60 : (currentModeIdx === 1 ? shortVal * 60 : longVal * 60);
+            
+            saveTimerStateToStorage();
+            broadcastStateToTabs();
+            
+            sendResponse({
+                type: "TIMER_TICK",
+                state: {
+                    isRunning: false,
+                    currentModeIdx,
+                    remainingSeconds,
+                    targetEndTime: null,
+                    taskId,
+                    allowedSites
+                }
+            });
+        });
+        return true;
     } else if (request.type === "GET_TIMER_STATE") {
         sendResponse({
             type: "TIMER_TICK",
             state: timerState
         });
+    } else if (request.type === "STOP_ALARM") {
+        chrome.tabs.query({}, (tabs) => {
+            if (tabs && tabs.length > 0) {
+                tabs.forEach(tab => {
+                    if (tab.id) {
+                        chrome.tabs.sendMessage(tab.id, { type: "STOP_ALARM" }, () => {
+                            if (chrome.runtime.lastError) {}
+                        });
+                    }
+                });
+            }
+        });
+        sendResponse({ status: "silenced" });
     } else if (request.type === "UPDATE_ALLOWED_SITES") {
         allowedSites = request.allowedSites || [];
         saveTimerStateToStorage();
