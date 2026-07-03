@@ -447,6 +447,7 @@ document.getElementById("save-settings-btn").addEventListener("click", () => {
         alert("Configuration saved successfully!");
         settingsPanel.style.display = "none";
         toggleSettingsBtn.innerText = "⚙ Configure Settings";
+    });
 });
 
 // Dismiss alarm button click listener
