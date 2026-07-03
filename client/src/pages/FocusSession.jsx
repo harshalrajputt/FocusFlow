@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { logFocusSession, getFocusSummary, updatePresence } from "../services/focusService";
+import { logFocusSession, getFocusSummary, updatePresence, getFocusSessions } from "../services/focusService";
 import { getTasks } from "../services/taskService";
 import Timer3DVisual from "../components/layout/Timer3DVisual";
 
@@ -233,6 +233,19 @@ const FocusSession = () => {
         }
     };
 
+    const [recentSessions, setRecentSessions] = useState([]);
+
+    const fetchRecentSessions = async () => {
+        try {
+            const res = await getFocusSessions({ limit: 10 });
+            if (res.data.success) {
+                setRecentSessions(res.data.sessions || []);
+            }
+        } catch (error) {
+            console.error("Error fetching recent focus sessions", error);
+        }
+    };
+
     const fetchSummary = async () => {
         try {
             const res = await getFocusSummary();
@@ -252,6 +265,7 @@ const FocusSession = () => {
     useEffect(() => {
         fetchSummary();
         fetchTasks();
+        fetchRecentSessions();
     }, []);
 
     // Listen for extension message syncs and ping on mount
@@ -458,6 +472,7 @@ const FocusSession = () => {
             setFeedbackModalOpen(false);
 
             fetchSummary();
+            fetchRecentSessions();
         } catch (error) {
             console.error("Error logging focus session with feedback", error);
         }
@@ -536,6 +551,7 @@ const FocusSession = () => {
                 setElapsed(0);
                 setStartTime(null);
                 fetchSummary();
+                fetchRecentSessions();
             });
         }
     };
@@ -1016,6 +1032,70 @@ const FocusSession = () => {
                         <p className="text-[var(--text-secondary)] text-xs mt-1">{s.label}</p>
                     </div>
                 ))}
+            </div>
+
+            {/* Recent Sessions History Panel */}
+            <div className="rounded-2xl p-6 border animate-fade-in-up delay-3 space-y-4" style={cardStyle}>
+                <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                    <h3 className="font-bold text-sm text-[var(--text-primary)] tracking-wide flex items-center gap-2">
+                        📜 Recent Focus History (Last 10 Sessions)
+                    </h3>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-sky-500 bg-sky-500/10 px-2 py-0.5 rounded-full">
+                        {recentSessions.length} logged
+                    </span>
+                </div>
+
+                {recentSessions.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-[var(--text-muted)] italic">
+                        No sessions completed yet. Start focusing to log your first session!
+                    </div>
+                ) : (
+                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                        {recentSessions.map((session, idx) => {
+                            const startTime = new Date(session.startTime);
+                            const endTime = new Date(session.endTime);
+                            
+                            const formatTime = (date) => {
+                                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            };
+                            
+                            const formatDate = (date) => {
+                                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                            };
+
+                            const durationMin = Math.round(session.duration / 60);
+
+                            return (
+                                <div 
+                                    key={session._id || idx}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] hover:border-sky-500/20 transition-all gap-3"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-lg">
+                                            {session.sessionType === "Focus" ? "⚡" : "☕"}
+                                        </span>
+                                        <div>
+                                            <p className="text-xs font-bold text-[var(--text-primary)]">
+                                                {session.sessionType === "Focus" ? `Focus: ${durationMin}m` : `Break: ${durationMin}m`}
+                                            </p>
+                                            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                                                🎯 Task: <span className="font-semibold text-[var(--text-secondary)]">{session.taskId?.title || "General Focus"}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="sm:text-right flex sm:flex-col justify-between items-center sm:items-end gap-1">
+                                        <p className="text-[10px] font-bold text-[var(--text-secondary)]">
+                                            {formatTime(startTime)} - {formatTime(endTime)}
+                                        </p>
+                                        <p className="text-[9px] uppercase tracking-wider font-extrabold text-[var(--text-muted)]">
+                                            {formatDate(startTime)}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Feedback Modal Overlay */}
