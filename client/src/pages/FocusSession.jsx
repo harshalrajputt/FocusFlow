@@ -24,7 +24,7 @@ const MODES = [
 const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 
 // Post-Session Feedback Modal (Phase 3 Adherence & Ratings)
-const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
+const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted, submitting }) => {
     const [rating, setRating] = useState(3);
     const [difficulty, setDifficulty] = useState("Normal");
     const [followedSchedule, setFollowedSchedule] = useState(true);
@@ -146,17 +146,19 @@ const PostSessionModal = ({ isOpen, onClose, onSubmit, isCompleted }) => {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs font-semibold cursor-pointer transition-colors"
+                        disabled={submitting}
+                        className="flex-1 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Skip Feedback
+                        {submitting ? "Processing..." : "Skip Feedback"}
                     </button>
                     <button
                         type="button"
                         onClick={() => onSubmit({ rating, difficulty, followedSchedule, missedTask, delayedTask })}
-                        className="flex-1 py-2.5 rounded-xl text-white text-xs font-semibold cursor-pointer"
+                        disabled={submitting}
+                        className="flex-1 py-2.5 rounded-xl text-white text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 12px var(--accent-glow)' }}
                     >
-                        Submit & Save
+                        {submitting ? "Saving..." : "Submit & Save"}
                     </button>
                 </div>
             </div>
@@ -183,6 +185,7 @@ const FocusSession = () => {
     const [interruptions, setInterruptions] = useState(0);
     const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
     const [pendingSession, setPendingSession] = useState(null);
+    const [isLogging, setIsLogging] = useState(false);
     const [completed, setCompleted] = useState(false);
 
     // Extension & allowed domains tracking
@@ -453,6 +456,8 @@ const FocusSession = () => {
         const activeSession = pendingSession || pendingSessionRef.current;
         if (!activeSession) return;
 
+        setIsLogging(true);
+
         try {
             const payload = {
                 taskId: selectedTaskId || null,
@@ -486,6 +491,8 @@ const FocusSession = () => {
             fetchRecentSessions();
         } catch (error) {
             console.error("Error logging focus session with feedback", error);
+        } finally {
+            setIsLogging(false);
         }
     };
 
@@ -1115,6 +1122,7 @@ const FocusSession = () => {
                 isCompleted={pendingSession?.completed}
                 onClose={handleSkipFeedback}
                 onSubmit={saveSessionWithFeedback}
+                submitting={isLogging}
             />
         </div>
     );
