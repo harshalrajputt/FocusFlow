@@ -62,7 +62,11 @@ function updateFloatingTimer(state) {
             const domain = window.location.hostname.replace("www.", "").toLowerCase();
             isAllowed = state.allowedSites.some(site => {
                 const cleanSite = getDomainFromInput(site);
-                return cleanSite && domain.includes(cleanSite);
+                if (!cleanSite) return false;
+                const primaryDomain = cleanSite.split('.')[0];
+                return domain.includes(cleanSite) || 
+                       cleanSite.includes(domain) || 
+                       (primaryDomain.length > 2 && domain.includes(primaryDomain));
             });
         } catch (e) {
             isAllowed = false;

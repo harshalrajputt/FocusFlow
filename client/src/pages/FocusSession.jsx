@@ -208,6 +208,7 @@ const FocusSession = () => {
     const [targetEndTime, setTargetEndTime] = useState(null);
     const [alarmPlaying, setAlarmPlaying] = useState(false);
     const alarmAudioRef = useRef(null);
+    const sessionCompleteTriggeredRef = useRef(false);
 
     const mode = modes[modeIdx];
     const total = mode.duration * 60;
@@ -329,7 +330,8 @@ const FocusSession = () => {
                         if (state.allowedSites && state.allowedSites.length > 0) {
                             setAllowedWorkSites(state.allowedSites.join(", "));
                         }
-                        if (isFinished) {
+                        if (isFinished && !sessionCompleteTriggeredRef.current) {
+                            sessionCompleteTriggeredRef.current = true;
                             handleSessionComplete(durationSec);
                         }
                     }
@@ -404,6 +406,23 @@ const FocusSession = () => {
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, [tasks]);
+
+    useEffect(() => {
+        let blinkInterval = null;
+        if (completed) {
+            let isBlinking = false;
+            blinkInterval = setInterval(() => {
+                document.title = isBlinking ? "FocusFlow" : "🔔 SESSION COMPLETED!";
+                isBlinking = !isBlinking;
+            }, 1000);
+        } else {
+            document.title = "FocusFlow";
+        }
+        return () => {
+            clearInterval(blinkInterval);
+            document.title = "FocusFlow";
+        };
+    }, [completed]);
 
     // Phase 3: Submit session logs with behavioral metrics
     const saveSessionWithFeedback = async (feedbackData = {}) => {
@@ -591,6 +610,7 @@ const FocusSession = () => {
     const handlePlayPause = async () => {
         if (!running) {
             setCompleted(false);
+            sessionCompleteTriggeredRef.current = false;
             // Announce to pod members that a focus session is starting
             if (modes[modeIdx].label === "Focus") {
                 try {
@@ -640,6 +660,7 @@ const FocusSession = () => {
 
     const switchMode = (i) => {
         setCompleted(false);
+        sessionCompleteTriggeredRef.current = false;
         localStorage.removeItem("focusflow_timer_state");
         if (running) {
             logInterruptedSession();

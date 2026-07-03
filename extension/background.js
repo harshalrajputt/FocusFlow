@@ -20,11 +20,39 @@ let isTimerRunning = false;
 let taskId = null;
 let targetEndTime = null;
 
-// Load custom config if present on startup
-chrome.storage.local.get("customSettings", (res) => {
+// Load custom config and restore timer state on startup/wake-up
+chrome.storage.local.get(["customSettings", "timerState"], (res) => {
     if (res.customSettings) {
         if (res.customSettings.blockedSites) blockedSites = res.customSettings.blockedSites;
         if (res.customSettings.allowedSites) allowedSites = res.customSettings.allowedSites;
+    }
+
+    if (res.timerState) {
+        const state = res.timerState;
+        isTimerRunning = state.isRunning || false;
+        currentModeIdx = state.currentModeIdx || 0;
+        remainingSeconds = state.remainingSeconds !== undefined ? state.remainingSeconds : 25 * 60;
+        targetEndTime = state.targetEndTime || null;
+        taskId = state.taskId || null;
+        allowedSites = state.allowedSites || [];
+
+        // Restore blocker active status if focus mode is active
+        if (isTimerRunning && currentModeIdx === 0) {
+            isFocusActive = true;
+        }
+
+        // If the timer was running, calculate wall clock drift and resume
+        if (isTimerRunning && targetEndTime) {
+            const secondsLeft = Math.round((targetEndTime - Date.now()) / 1000);
+            if (secondsLeft > 0) {
+                remainingSeconds = secondsLeft;
+                startCountdownLoop();
+            } else {
+                remainingSeconds = 0;
+                isTimerRunning = false;
+                handleTimerCompleteInBackground();
+            }
+        }
     }
 });
 
@@ -75,7 +103,40 @@ function accumulateTime(domain, seconds) {
     if (shouldSkipDomain(domain)) return;
     chrome.storage.local.get(["webUsageLogs"], (res) => {
         const logs = res.webUsageLogs || {};
-        logs[domain] = (logs[domain] || 0) + seconds;
+        
+        let category = null;
+        if (isTimerRunning && allowedSites && allowedSites.length > 0) {
+            const isMatch = allowedSites.some(site => {
+                const cleanSite = getDomainFromInput(site);
+                if (!cleanSite) return false;
+                const primaryDomain = cleanSite.split('.')[0];
+                return domain.toLowerCase().includes(cleanSite) || 
+                       cleanSite.includes(domain.toLowerCase()) || 
+                       (primaryDomain.length > 2 && domain.toLowerCase().includes(primaryDomain));
+            });
+            if (isMatch) {
+                category = "Productive";
+            }
+        }
+
+        if (logs[domain]) {
+            if (typeof logs[domain] === "number") {
+                logs[domain] = {
+                    timeSpent: logs[domain] + seconds,
+                    category: category
+                };
+            } else {
+                logs[domain].timeSpent = (logs[domain].timeSpent || 0) + seconds;
+                if (category) {
+                    logs[domain].category = category;
+                }
+            }
+        } else {
+            logs[domain] = {
+                timeSpent: seconds,
+                category: category
+            };
+        }
         chrome.storage.local.set({ webUsageLogs: logs });
     });
 }
@@ -110,12 +171,18 @@ function syncLogsToBackend() {
             const logs = res.webUsageLogs;
             const dateStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format local date
             
-            const logList = Object.entries(logs).map(([domain, timeSpent]) => {
-                let category = null;
-                if (isTimerRunning && allowedSites && allowedSites.length > 0) {
+            const logList = Object.entries(logs).map(([domain, value]) => {
+                const timeSpent = typeof value === "number" ? value : (value.timeSpent || 0);
+                let category = typeof value === "number" ? null : (value.category || null);
+                
+                if (!category && isTimerRunning && allowedSites && allowedSites.length > 0) {
                     const isMatch = allowedSites.some(site => {
                         const cleanSite = getDomainFromInput(site);
-                        return cleanSite && domain.toLowerCase().includes(cleanSite);
+                        if (!cleanSite) return false;
+                        const primaryDomain = cleanSite.split('.')[0];
+                        return domain.toLowerCase().includes(cleanSite) || 
+                               cleanSite.includes(domain.toLowerCase()) || 
+                               (primaryDomain.length > 2 && domain.toLowerCase().includes(primaryDomain));
                     });
                     if (isMatch) {
                         category = "Productive";
@@ -127,7 +194,7 @@ function syncLogsToBackend() {
                     date: dateStr,
                     category
                 };
-            });
+            }).filter(item => item.timeSpent > 0);
             
             if (logList.length === 0) return;
             
@@ -146,11 +213,19 @@ function syncLogsToBackend() {
                         // Subtract successfully sent logs to prevent race conditions during browsing
                         chrome.storage.local.get(["webUsageLogs"], (currentRes) => {
                             const currentLogs = currentRes.webUsageLogs || {};
-                            for (const [domain, sentSec] of Object.entries(logs)) {
+                            for (const [domain, sentVal] of Object.entries(logs)) {
+                                const sentSec = typeof sentVal === "number" ? sentVal : (sentVal.timeSpent || 0);
                                 if (currentLogs[domain]) {
-                                    currentLogs[domain] -= sentSec;
-                                    if (currentLogs[domain] <= 0) {
-                                        delete currentLogs[domain];
+                                    if (typeof currentLogs[domain] === "number") {
+                                        currentLogs[domain] -= sentSec;
+                                        if (currentLogs[domain] <= 0) {
+                                            delete currentLogs[domain];
+                                        }
+                                    } else {
+                                        currentLogs[domain].timeSpent -= sentSec;
+                                        if (currentLogs[domain].timeSpent <= 0) {
+                                            delete currentLogs[domain];
+                                        }
                                     }
                                 }
                             }
@@ -300,7 +375,11 @@ function checkActiveTabForTimerDecrement(callback) {
             // Check if domain matches any of the allowed sites
             const isMatch = allowedSites.some(site => {
                 const cleanSite = getDomainFromInput(site);
-                return cleanSite && domain.includes(cleanSite);
+                if (!cleanSite) return false;
+                const primaryDomain = cleanSite.split('.')[0];
+                return domain.includes(cleanSite) || 
+                       cleanSite.includes(domain) || 
+                       (primaryDomain.length > 2 && domain.includes(primaryDomain));
             });
 
             callback(isMatch);
@@ -331,6 +410,11 @@ function startTimerInBackground(duration, modeIdx, tId, allowed, taskLabel, skip
     saveTimerStateToStorage();
     broadcastStateToTabs();
 
+    startCountdownLoop();
+}
+
+function startCountdownLoop() {
+    clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         if (!isTimerRunning) {
             clearInterval(timerInterval);
@@ -604,7 +688,14 @@ function checkAndBlockTab(tabId, url) {
         const domain = urlObj.hostname.replace("www.", "");
         
         // Check whitelist first
-        const isAllowed = allowedSites.some(site => domain.includes(site));
+        const isAllowed = allowedSites.some(site => {
+            const cleanSite = getDomainFromInput(site);
+            if (!cleanSite) return false;
+            const primaryDomain = cleanSite.split('.')[0];
+            return domain.includes(cleanSite) || 
+                   cleanSite.includes(domain) || 
+                   (primaryDomain.length > 2 && domain.includes(primaryDomain));
+        });
         if (isAllowed) return;
 
         const isBlocked = blockedSites.some(site => domain.includes(site));
