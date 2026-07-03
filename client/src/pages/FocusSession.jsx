@@ -209,6 +209,13 @@ const FocusSession = () => {
     const [alarmPlaying, setAlarmPlaying] = useState(false);
     const alarmAudioRef = useRef(null);
     const sessionCompleteTriggeredRef = useRef(false);
+    const pendingSessionRef = useRef(null);
+    const runningRef = useRef(false);
+    const modeIdxRef = useRef(0);
+
+    pendingSessionRef.current = pendingSession;
+    runningRef.current = running;
+    modeIdxRef.current = modeIdx;
 
     const mode = modes[modeIdx];
     const total = mode.duration * 60;
@@ -329,7 +336,7 @@ const FocusSession = () => {
                     }
                     const state = message.state;
                     if (state) {
-                        const isFinished = running && !state.isRunning && state.remainingSeconds === 0;
+                        const isFinished = runningRef.current && !state.isRunning && state.remainingSeconds === 0;
                         setRunning(state.isRunning);
                         setModeIdx(state.currentModeIdx);
                         const savedDurs = localStorage.getItem("focusflow_custom_durations");
@@ -354,7 +361,7 @@ const FocusSession = () => {
                     
                     const savedDurs = localStorage.getItem("focusflow_custom_durations");
                     const parsedDurs = savedDurs ? JSON.parse(savedDurs) : { focus: 25, short: 5, long: 15 };
-                    const currentModeIdx = message.modeIdx !== undefined ? message.modeIdx : modeIdx;
+                    const currentModeIdx = message.modeIdx !== undefined ? message.modeIdx : modeIdxRef.current;
                     const durMin = currentModeIdx === 0 ? parsedDurs.focus : (currentModeIdx === 1 ? parsedDurs.short : parsedDurs.long);
                     
                     handleSessionComplete(durMin * 60);
@@ -365,6 +372,9 @@ const FocusSession = () => {
                         alarmAudioRef.current = null;
                     }
                     setAlarmPlaying(false);
+                    if (pendingSessionRef.current) {
+                        saveSessionWithFeedback();
+                    }
                 }
             }
         };
@@ -440,16 +450,17 @@ const FocusSession = () => {
 
     // Phase 3: Submit session logs with behavioral metrics
     const saveSessionWithFeedback = async (feedbackData = {}) => {
-        if (!pendingSession) return;
+        const activeSession = pendingSession || pendingSessionRef.current;
+        if (!activeSession) return;
 
         try {
             const payload = {
                 taskId: selectedTaskId || null,
-                sessionType: pendingSession.sessionType,
-                duration: pendingSession.duration,
-                startTime: pendingSession.startTime,
-                endTime: pendingSession.endTime,
-                completed: pendingSession.completed,
+                sessionType: activeSession.sessionType,
+                duration: activeSession.duration,
+                startTime: activeSession.startTime,
+                endTime: activeSession.endTime,
+                completed: activeSession.completed,
                 interruptions,
                 pauseCount,
                 followedSchedule: feedbackData.followedSchedule !== undefined ? feedbackData.followedSchedule : true,
