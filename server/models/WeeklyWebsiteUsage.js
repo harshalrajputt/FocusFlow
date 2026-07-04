@@ -30,7 +30,7 @@ const weeklyWebsiteUsageSchema = new mongoose.Schema(
     }
 );
 
-// Ensure unique index per user, week, and domain
-weeklyWebsiteUsageSchema.index({ userId: 1, weekStartDate: 1, domain: 1 }, { unique: true });
+// Ensure unique index per user, week, domain, and category
+weeklyWebsiteUsageSchema.index({ userId: 1, weekStartDate: 1, domain: 1, category: 1 }, { unique: true });
 
 module.exports = mongoose.model("WeeklyWebsiteUsage", weeklyWebsiteUsageSchema);

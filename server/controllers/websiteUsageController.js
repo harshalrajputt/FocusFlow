@@ -95,10 +95,9 @@ const logWebsiteUsage = async (req, res) => {
             
             // 1. Increment Daily
             await WebsiteUsage.findOneAndUpdate(
-                { userId, date, domain },
+                { userId, date, domain, category },
                 { 
-                    $inc: { timeSpent },
-                    $set: { category }
+                    $inc: { timeSpent }
                 },
                 { upsert: true }
             );
@@ -106,10 +105,9 @@ const logWebsiteUsage = async (req, res) => {
             // 2. Increment Weekly
             const weekStartDate = getWeekStartDate(date);
             await WeeklyWebsiteUsage.findOneAndUpdate(
-                { userId, weekStartDate, domain },
+                { userId, weekStartDate, domain, category },
                 { 
-                    $inc: { timeSpent },
-                    $set: { category }
+                    $inc: { timeSpent }
                 },
                 { upsert: true }
             );
@@ -117,10 +115,9 @@ const logWebsiteUsage = async (req, res) => {
             // 3. Increment Monthly
             const monthStartDate = getMonthStartDate(date);
             await MonthlyWebsiteUsage.findOneAndUpdate(
-                { userId, monthStartDate, domain },
+                { userId, monthStartDate, domain, category },
                 { 
-                    $inc: { timeSpent },
-                    $set: { category }
+                    $inc: { timeSpent }
                 },
                 { upsert: true }
             );

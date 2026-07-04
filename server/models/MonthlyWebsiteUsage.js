@@ -30,7 +30,7 @@ const monthlyWebsiteUsageSchema = new mongoose.Schema(
     }
 );
 
-// Ensure unique index per user, month, and domain
-monthlyWebsiteUsageSchema.index({ userId: 1, monthStartDate: 1, domain: 1 }, { unique: true });
+// Ensure unique index per user, month, domain, and category
+monthlyWebsiteUsageSchema.index({ userId: 1, monthStartDate: 1, domain: 1, category: 1 }, { unique: true });
 
 module.exports = mongoose.model("MonthlyWebsiteUsage", monthlyWebsiteUsageSchema);

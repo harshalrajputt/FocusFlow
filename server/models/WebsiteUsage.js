@@ -30,7 +30,7 @@ const websiteUsageSchema = new mongoose.Schema(
     }
 );
 
-// Compound index to quickly find and update domain logs per user per date
-websiteUsageSchema.index({ userId: 1, date: 1, domain: 1 }, { unique: true });
+// Compound index to quickly find and update domain logs per user per date per category
+websiteUsageSchema.index({ userId: 1, date: 1, domain: 1, category: 1 }, { unique: true });
 
 module.exports = mongoose.model("WebsiteUsage", websiteUsageSchema);

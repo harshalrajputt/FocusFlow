@@ -60,6 +60,27 @@ const connectDB = async () => {
         await mongoose.connect(process.env.MONGO_URI);
 
         console.log("MongoDB Connected");
+
+        // Drop old unique indexes to allow category-based indexing
+        try {
+            await mongoose.connection.db.collection("websiteusages").dropIndex("userId_1_date_1_domain_1");
+            console.log("Successfully dropped index userId_1_date_1_domain_1");
+        } catch (e) {
+            // Index might not exist, which is fine
+        }
+        try {
+            await mongoose.connection.db.collection("weeklywebsiteusages").dropIndex("userId_1_weekStartDate_1_domain_1");
+            console.log("Successfully dropped index userId_1_weekStartDate_1_domain_1");
+        } catch (e) {
+            // Index might not exist, which is fine
+        }
+        try {
+            await mongoose.connection.db.collection("monthlywebsiteusages").dropIndex("userId_1_monthStartDate_1_domain_1");
+            console.log("Successfully dropped index userId_1_monthStartDate_1_domain_1");
+        } catch (e) {
+            // Index might not exist, which is fine
+        }
+
         await runUsernameMigration();
     } catch (error) {
         console.log(error.message);
