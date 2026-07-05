@@ -143,14 +143,14 @@ function accumulateTime(domain, seconds) {
 
 // Environment Discovery helper
 function getBackendUrl(callback) {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-        let url = "https://focusflow-backend-liuf.onrender.com/api";
-        if (tabs && tabs[0] && tabs[0].url) {
-            const pageUrl = tabs[0].url;
-            if (pageUrl.includes("localhost") || pageUrl.includes("127.0.0.1")) {
-                url = "http://localhost:5000/api";
-            }
+    chrome.tabs.query({}, (tabs) => {
+        let hasLocalhost = false;
+        if (tabs && tabs.length > 0) {
+            hasLocalhost = tabs.some(tab => tab.url && (tab.url.includes("localhost") || tab.url.includes("127.0.0.1")));
         }
+        const url = hasLocalhost 
+            ? "http://localhost:5000/api" 
+            : "https://focusflow-backend-liuf.onrender.com/api";
         callback(url);
     });
 }
