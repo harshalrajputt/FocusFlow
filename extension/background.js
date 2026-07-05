@@ -496,51 +496,70 @@ async function handleTimerCompleteInBackground() {
         if (chrome.runtime.lastError) {}
     });
 
-    // Save session logs to Backend (Only if FocusFlow web app page is not open)
-    chrome.tabs.query({}, (tabs) => {
-        const isWebAppOpen = tabs.some(tab => tab.url && (tab.url.includes("localhost:5173") || tab.url.includes("focus-flow-flame-five.vercel.app")));
-        if (isWebAppOpen) {
-            console.log("FocusFlow webapp is open. Letting the webpage handle the session logging.");
-            return;
+    // Save session logs to Backend (Always save from background worker to prevent loss on sleep/throttling)
+    chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
+        if (!res.token) return;
+
+        // Use custom settings if available
+        let duration = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
+        const result = await chrome.storage.local.get("customSettings");
+        if (result.customSettings) {
+            duration = currentModeIdx === 0 ? (result.customSettings.focusTime * 60) : (currentModeIdx === 1 ? (result.customSettings.shortTime * 60) : (result.customSettings.longTime * 60));
         }
 
-        chrome.storage.local.get(["token", "sessionMetrics"], async (res) => {
-            if (!res.token) return;
+        const end = new Date();
+        const start = new Date(end.getTime() - duration * 1000);
+        const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
 
-            const duration = currentModeIdx === 0 ? 25 * 60 : (currentModeIdx === 1 ? 5 * 60 : 15 * 60);
-            const end = new Date();
-            const start = new Date(end.getTime() - duration * 1000);
-            const metrics = res.sessionMetrics || { interruptions: 0, pauseCount: 0 };
-
-            getBackendUrl(async (backendUrl) => {
-                try {
-                    await fetch(`${backendUrl}/focus`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${res.token}`
-                        },
-                        body: JSON.stringify({
-                            taskId: taskId || null,
-                            sessionType: currentModeIdx === 0 ? "Focus" : (currentModeIdx === 1 ? "Short Break" : "Long Break"),
-                            duration,
-                            startTime: start.toISOString(),
-                            endTime: end.toISOString(),
-                            completed: true,
-                            interruptions: metrics.interruptions || 0,
-                            pauseCount: metrics.pauseCount || 0,
-                            followedSchedule: true,
-                            difficultyRating: 3,
-                            difficultyFeedback: "Normal",
-                            telemetryAvailable: true
-                        })
+        getBackendUrl(async (backendUrl) => {
+            try {
+                const response = await fetch(`${backendUrl}/focus`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${res.token}`
+                    },
+                    body: JSON.stringify({
+                        taskId: taskId || null,
+                        sessionType: currentModeIdx === 0 ? "Focus" : (currentModeIdx === 1 ? "Short Break" : "Long Break"),
+                        duration,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString(),
+                        completed: true,
+                        interruptions: metrics.interruptions || 0,
+                        pauseCount: metrics.pauseCount || 0,
+                        followedSchedule: true,
+                        difficultyRating: 3,
+                        difficultyFeedback: "Normal",
+                        telemetryAvailable: true
+                    })
+                });
+                const data = await response.json();
+                if (data.success && data.session && data.session._id) {
+                    // Save the last session ID to storage so webapp can load it to submit feedback ratings
+                    chrome.storage.local.set({ lastSessionId: data.session._id });
+                    
+                    // Broadcast session logged event to webpage
+                    chrome.tabs.query({}, (tabs) => {
+                        tabs.forEach(tab => {
+                            if (tab.id) {
+                                chrome.tabs.sendMessage(tab.id, { 
+                                    type: "SESSION_LOGGED", 
+                                    sessionId: data.session._id,
+                                    session: data.session
+                                }, () => {
+                                    if (chrome.runtime.lastError) {}
+                                });
+                            }
+                        });
                     });
-                    // Reset metrics in storage
-                    chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
-                } catch (err) {
-                    console.error("Failed to auto-save completed session from background:", err);
                 }
-            });
+                
+                // Reset metrics in storage
+                chrome.storage.local.set({ sessionMetrics: { interruptions: 0, pauseCount: 0 } });
+            } catch (err) {
+                console.error("Failed to auto-save completed session from background:", err);
+            }
         });
     });
 }
@@ -624,10 +643,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     } else if (request.type === "GET_TIMER_STATE") {
-        sendResponse({
-            type: "TIMER_TICK",
-            state: timerState
+        chrome.storage.local.get("lastSessionId", (res) => {
+            sendResponse({
+                type: "TIMER_TICK",
+                state: timerState,
+                lastSessionId: res.lastSessionId || null
+            });
         });
+        return true;
     } else if (request.type === "STOP_ALARM") {
         chrome.tabs.query({}, (tabs) => {
             if (tabs && tabs.length > 0) {

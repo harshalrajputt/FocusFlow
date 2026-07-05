@@ -458,9 +458,45 @@ const updatePresence = async (req, res) => {
     }
 };
 
+const updateSessionFeedback = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const {
+            followedSchedule,
+            missedTask,
+            delayedTask,
+            difficultyRating,
+            difficultyFeedback
+        } = req.body;
+
+        const session = await FocusSession.findOneAndUpdate(
+            { _id: sessionId, userId: req.user.id },
+            {
+                $set: {
+                    followedSchedule: followedSchedule !== undefined ? followedSchedule : true,
+                    missedTask: missedTask || false,
+                    delayedTask: delayedTask || false,
+                    difficultyRating: difficultyRating || 3,
+                    difficultyFeedback: difficultyFeedback || "Normal"
+                }
+            },
+            { new: true }
+        );
+
+        if (!session) {
+            return res.status(404).json({ success: false, message: "Focus session not found." });
+        }
+
+        return res.status(200).json({ success: true, session });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error updating session feedback." });
+    }
+};
+
 module.exports = {
     logSession,
     getSessions,
     getSummary,
     updatePresence,
+    updateSessionFeedback,
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { logFocusSession, getFocusSummary, updatePresence, getFocusSessions } from "../services/focusService";
+import { logFocusSession, getFocusSummary, updatePresence, getFocusSessions, updateSessionFeedback } from "../services/focusService";
 import { getTasks } from "../services/taskService";
 import Timer3DVisual from "../components/layout/Timer3DVisual";
 
@@ -187,6 +187,7 @@ const FocusSession = () => {
     const [pendingSession, setPendingSession] = useState(null);
     const [isLogging, setIsLogging] = useState(false);
     const [completed, setCompleted] = useState(false);
+    const [activeLogId, setActiveLogId] = useState(null);
 
     // Extension & allowed domains tracking
     const [allowedWorkSites, setAllowedWorkSites] = useState("");
@@ -354,10 +355,20 @@ const FocusSession = () => {
                         if (state.allowedSites && state.allowedSites.length > 0) {
                             setAllowedWorkSites(state.allowedSites.join(", "));
                         }
+                        if (message.lastSessionId) {
+                            setActiveLogId(message.lastSessionId);
+                        }
                         if (isFinished && !sessionCompleteTriggeredRef.current) {
                             sessionCompleteTriggeredRef.current = true;
                             handleSessionComplete(durationSec);
                         }
+                    }
+                } else if (message.type === "SESSION_LOGGED") {
+                    setActiveLogId(message.sessionId);
+                    if (message.session && message.session.sessionType === "Focus") {
+                        setCompleted(true);
+                        setFeedbackModalOpen(true);
+                        playAlarm();
                     }
                 } else if (message.type === "PLAY_ALARM") {
                     playAlarm();
@@ -375,9 +386,12 @@ const FocusSession = () => {
                         alarmAudioRef.current = null;
                     }
                     setAlarmPlaying(false);
-                    if (pendingSessionRef.current) {
-                        saveSessionWithFeedback();
-                    }
+                    setFeedbackModalOpen(false);
+                    setCompleted(false);
+                    setPendingSession(null);
+                    setActiveLogId(null);
+                    fetchSummary();
+                    fetchRecentSessions();
                 }
             }
         };
@@ -453,30 +467,41 @@ const FocusSession = () => {
 
     // Phase 3: Submit session logs with behavioral metrics
     const saveSessionWithFeedback = async (feedbackData = {}) => {
-        const activeSession = pendingSession || pendingSessionRef.current;
-        if (!activeSession) return;
-
         setIsLogging(true);
 
         try {
-            const payload = {
-                taskId: selectedTaskId || null,
-                sessionType: activeSession.sessionType,
-                duration: activeSession.duration,
-                startTime: activeSession.startTime,
-                endTime: activeSession.endTime,
-                completed: activeSession.completed,
-                interruptions,
-                pauseCount,
-                followedSchedule: feedbackData.followedSchedule !== undefined ? feedbackData.followedSchedule : true,
-                missedTask: feedbackData.missedTask || false,
-                delayedTask: feedbackData.delayedTask || false,
-                difficultyRating: feedbackData.rating || 3,
-                difficultyFeedback: feedbackData.difficulty || "Normal",
-                telemetryAvailable: extensionActive
-            };
+            if (extensionActive && activeLogId) {
+                // Background script already logged the session, update its feedback fields
+                await updateSessionFeedback(activeLogId, {
+                    followedSchedule: feedbackData.followedSchedule !== undefined ? feedbackData.followedSchedule : true,
+                    missedTask: feedbackData.missedTask || false,
+                    delayedTask: feedbackData.delayedTask || false,
+                    difficultyRating: feedbackData.rating || 3,
+                    difficultyFeedback: feedbackData.difficulty || "Normal"
+                });
+            } else {
+                const activeSession = pendingSession || pendingSessionRef.current;
+                if (!activeSession) return;
 
-            await logFocusSession(payload);
+                const payload = {
+                    taskId: selectedTaskId || null,
+                    sessionType: activeSession.sessionType,
+                    duration: activeSession.duration,
+                    startTime: activeSession.startTime,
+                    endTime: activeSession.endTime,
+                    completed: activeSession.completed,
+                    interruptions,
+                    pauseCount,
+                    followedSchedule: feedbackData.followedSchedule !== undefined ? feedbackData.followedSchedule : true,
+                    missedTask: feedbackData.missedTask || false,
+                    delayedTask: feedbackData.delayedTask || false,
+                    difficultyRating: feedbackData.rating || 3,
+                    difficultyFeedback: feedbackData.difficulty || "Normal",
+                    telemetryAvailable: extensionActive
+                };
+
+                await logFocusSession(payload);
+            }
             
             // Clean up session states
             stopAlarm();
@@ -485,6 +510,7 @@ const FocusSession = () => {
             setPauseCount(0);
             setInterruptions(0);
             setPendingSession(null);
+            setActiveLogId(null);
             setFeedbackModalOpen(false);
 
             fetchSummary();
