@@ -840,3 +840,66 @@ body.dark-theme .bg-\[\#070d19\] {
     padding-right: 12px !important;
   }
 }
+
+
+/* =====================================================================
+   ⚡ MOBILE PERFORMANCE OPTIMISATIONS
+   Applied only on screens < 768px. Desktop is 100% unchanged.
+   ===================================================================== */
+@media (max-width: 767px) {
+
+  /* 1. Kill the SVG noise texture — expensive GPU compositing layer */
+  body::before {
+    display: none !important;
+  }
+
+  /* 2. Disable GPU-hungry CSS transitions on cards */
+  .rounded-2xl {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  /* 3. Reduce backdrop-blur cost — blur(20px) is very heavy on mobile */
+  header {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* 4. Promote sidebar & navbar to their own compositor layers */
+  .sidebar-mobile {
+    will-change: transform;
+    contain: layout style;
+  }
+  header {
+    will-change: auto;
+    contain: layout style;
+  }
+
+  /* 5. Disable button shine-sweep on mobile (constant repaint) */
+  button::before {
+    display: none !important;
+  }
+
+  /* 6. Disable sidebar link shimmer on mobile */
+  aside nav a::after {
+    display: none !important;
+  }
+
+  /* 7. Shorten / simplify motion animations */
+  .animate-fade-in-up {
+    animation-duration: 0.2s !important;
+  }
+  .animate-fade-in {
+    animation-duration: 0.15s !important;
+  }
+  .animate-float,
+  .animate-blob,
+  .animate-breathe {
+    animation: none !important;
+  }
+
+  /* 8. Stat-card glow ring — skip the mask composite trick on mobile */
+  .stat-card-glow::before {
+    display: none !important;
+  }
+}

@@ -1,10 +1,23 @@
 import { useEffect, useRef } from "react";
+import { isMobileDevice } from "../../utils/deviceUtils";
 
+/**
+ * Background3DCanvas
+ * ------------------
+ * Desktop: Full constellation + 3-D cursor-trail canvas animation.
+ * Mobile : Returns null — zero GPU/CPU cost. Mobile browsers struggle
+ *          with two full-screen rAF loops and O(n²) line checks.
+ */
 export default function Background3DCanvas() {
     const bgCanvasRef = useRef(null);
     const fgCanvasRef = useRef(null);
 
+    // Skip everything on mobile — biggest single perf win
+    const isMobile = isMobileDevice();
+
     useEffect(() => {
+        if (isMobile) return; // nothing to set up
+
         const bgCanvas = bgCanvasRef.current;
         const fgCanvas = fgCanvasRef.current;
         if (!bgCanvas || !fgCanvas) return;
@@ -39,7 +52,7 @@ export default function Background3DCanvas() {
             constructor() {
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
-                this.z = Math.random() * 1.5 + 0.5; // depth
+                this.z = Math.random() * 1.5 + 0.5;
                 this.vx = (Math.random() - 0.5) * 0.35;
                 this.vy = (Math.random() - 0.5) * 0.35;
                 this.radius = (Math.random() * 1.8 + 0.8) * this.z;
@@ -49,13 +62,11 @@ export default function Background3DCanvas() {
                 this.x += this.vx * this.z;
                 this.y += this.vy * this.z;
 
-                // Wrap boundaries
                 if (this.x < 0) this.x = width;
                 if (this.x > width) this.x = 0;
                 if (this.y < 0) this.y = height;
                 if (this.y > height) this.y = 0;
 
-                // Mouse push force
                 if (mouse.x !== null && mouse.y !== null) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
@@ -65,7 +76,6 @@ export default function Background3DCanvas() {
                         const angle = Math.atan2(dy, dx);
                         const targetX = this.x + Math.cos(angle) * force * 12;
                         const targetY = this.y + Math.sin(angle) * force * 12;
-                        
                         this.x += (targetX - this.x) * 0.08;
                         this.y += (targetY - this.y) * 0.08;
                     }
@@ -108,23 +118,22 @@ export default function Background3DCanvas() {
             }
         };
 
-
         // 2. FOREGROUND 3D CURSOR TRAIL SETUP
         const cubeVertices = [
             { x: -1, y: -1, z: -1 }, { x: 1, y: -1, z: -1 }, { x: 1, y: 1, z: -1 }, { x: -1, y: 1, z: -1 },
             { x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }
         ];
         const cubeEdges = [
-            [0, 1], [1, 2], [2, 3], [3, 0], // Back
-            [4, 5], [5, 6], [6, 7], [7, 4], // Front
-            [0, 4], [1, 5], [2, 6], [3, 7]  // Connectors
+            [0, 1], [1, 2], [2, 3], [3, 0],
+            [4, 5], [5, 6], [6, 7], [7, 4],
+            [0, 4], [1, 5], [2, 6], [3, 7]
         ];
 
         const rotate3D = (point, ax, ay, az) => {
             let cos = Math.cos(ax), sin = Math.sin(ax);
             let y1 = point.y * cos - point.z * sin;
             let z1 = point.y * sin + point.z * cos;
-            
+
             cos = Math.cos(ay); sin = Math.sin(ay);
             let x2 = point.x * cos - z1 * sin;
             let z2 = point.x * sin + z1 * cos;
@@ -139,18 +148,13 @@ export default function Background3DCanvas() {
         const project = (x, y, z, cx, cy) => {
             const perspective = 300;
             const scale = perspective / (perspective + z);
-            return {
-                x: x * scale + cx,
-                y: y * scale + cy,
-                visible: z > -perspective
-            };
+            return { x: x * scale + cx, y: y * scale + cy, visible: z > -perspective };
         };
 
         const trail = [];
         let frameCount = 0;
 
-
-        // 3. ANIMATION RENDERING LOOP
+        // 3. ANIMATION LOOP
         const animate = () => {
             if (isReducedMotion()) {
                 bgCtx.clearRect(0, 0, width, height);
@@ -158,14 +162,11 @@ export default function Background3DCanvas() {
                 return;
             }
 
-            // Clear canvases
             bgCtx.clearRect(0, 0, width, height);
             fgCtx.clearRect(0, 0, width, height);
 
             frameCount++;
 
-            // ─── A. BACKGROUND CONSTELLATION ───
-            // Draw ambient cursor spotlight glow
             if (mouse.x !== null && mouse.y !== null) {
                 const grad = bgCtx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 250);
                 grad.addColorStop(0, colors.accent + "09");
@@ -174,23 +175,15 @@ export default function Background3DCanvas() {
                 bgCtx.fillRect(0, 0, width, height);
             }
 
-            bgParticles.forEach((p) => {
-                p.update();
-                p.draw();
-            });
+            bgParticles.forEach((p) => { p.update(); p.draw(); });
             drawBGLines();
 
-            // ─── B. FOREGROUND 3D CURSOR TRAIL ───
-            // Spawn cubes on movement
             if (mouse.speed > 1.5 && frameCount % 3 === 0) {
                 trail.push({
-                    x: mouse.x,
-                    y: mouse.y,
+                    x: mouse.x, y: mouse.y,
                     size: Math.random() * 11 + 5,
                     life: 1.0,
-                    ax: Math.random() * Math.PI,
-                    ay: Math.random() * Math.PI,
-                    az: Math.random() * Math.PI,
+                    ax: Math.random() * Math.PI, ay: Math.random() * Math.PI, az: Math.random() * Math.PI,
                     vax: (Math.random() - 0.5) * 0.08,
                     vay: (Math.random() - 0.5) * 0.08,
                     vaz: (Math.random() - 0.5) * 0.08,
@@ -198,15 +191,10 @@ export default function Background3DCanvas() {
                 });
             }
 
-            // Draw and decay trail
             for (let i = trail.length - 1; i >= 0; i--) {
                 const item = trail[i];
-                item.life -= 0.018; // decay speed
-
-                if (item.life <= 0) {
-                    trail.splice(i, 1);
-                    continue;
-                }
+                item.life -= 0.018;
+                if (item.life <= 0) { trail.splice(i, 1); continue; }
 
                 item.ax += item.vax;
                 item.ay += item.vay;
@@ -226,7 +214,7 @@ export default function Background3DCanvas() {
                 fgCtx.lineWidth = 0.9 * item.life;
                 fgCtx.shadowBlur = 4 * item.life;
                 fgCtx.shadowColor = item.color;
-                
+
                 cubeEdges.forEach(([start, end]) => {
                     const p1 = projectedCube[start];
                     const p2 = projectedCube[end];
@@ -241,24 +229,19 @@ export default function Background3DCanvas() {
                 });
             }
 
-            fgCtx.shadowBlur = 0; // reset
-            mouse.speed *= 0.94; // decelerate
+            fgCtx.shadowBlur = 0;
+            mouse.speed *= 0.94;
 
             animationFrameId = requestAnimationFrame(animate);
         };
 
-        // Listeners
         const handleMouseMove = (e) => {
             mouse.speed = Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y);
             mouse.x = e.clientX;
             mouse.y = e.clientY;
         };
 
-        const handleMouseLeave = () => {
-            mouse.x = null;
-            mouse.y = null;
-            mouse.speed = 0;
-        };
+        const handleMouseLeave = () => { mouse.x = null; mouse.y = null; mouse.speed = 0; };
 
         const handleResize = () => {
             width = bgCanvas.width = fgCanvas.width = window.innerWidth;
@@ -266,9 +249,7 @@ export default function Background3DCanvas() {
             initBG();
         };
 
-        const observer = new MutationObserver(() => {
-            colors = getColors();
-        });
+        const observer = new MutationObserver(() => { colors = getColors(); });
         observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
         window.addEventListener("mousemove", handleMouseMove);
@@ -285,17 +266,18 @@ export default function Background3DCanvas() {
             window.removeEventListener("resize", handleResize);
             observer.disconnect();
         };
-    }, []);
+    }, [isMobile]);
+
+    // On mobile: render nothing — no canvas overhead at all
+    if (isMobile) return null;
 
     return (
         <>
-            {/* Background Constellation Canvas */}
             <canvas
                 ref={bgCanvasRef}
                 className="fixed inset-0 pointer-events-none z-[-1]"
                 style={{ mixBlendMode: "normal", opacity: 0.8 }}
             />
-            {/* Foreground 3D Cursor Trail Canvas */}
             <canvas
                 ref={fgCanvasRef}
                 className="fixed inset-0 pointer-events-none z-[9999]"
