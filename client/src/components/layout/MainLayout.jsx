@@ -13,6 +13,7 @@ export default function MainLayout() {
     const location = useLocation();
     const [missedSessions, setMissedSessions] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
     // Mandatory username choice overlay states
     const [usernameInput, setUsernameInput] = useState(() => {
@@ -135,9 +136,12 @@ export default function MainLayout() {
     return (
         <div className="flex min-h-screen relative bg-transparent">
             <Background3DCanvas />
-            <Sidebar />
-            <div className="flex-1 flex flex-col min-w-0">
-                <Navbar />
+            <Sidebar
+                mobileOpen={mobileSidebarOpen}
+                onMobileClose={() => setMobileSidebarOpen(false)}
+            />
+            <div className="flex-1 flex flex-col min-w-0 main-content-area">
+                <Navbar onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)} />
                 <main className="flex-1 overflow-auto relative">
                     <AnimatePresence mode="wait">
                         <motion.div

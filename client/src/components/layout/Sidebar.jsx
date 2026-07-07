@@ -42,7 +42,7 @@ const menuItems = [
     },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, onMobileClose }) {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -57,6 +57,11 @@ export default function Sidebar() {
         observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
         return () => observer.disconnect();
     }, []);
+
+    // Close mobile sidebar on route change
+    useEffect(() => {
+        if (onMobileClose) onMobileClose();
+    }, [location.pathname, location.search]);
 
     const isItemActive = (item) => {
         const itemPath = item.path;
@@ -79,17 +84,9 @@ export default function Sidebar() {
         navigate("/login");
     };
 
-    return (
-        <motion.aside
-            animate={{ width: isCompact ? 76 : 256 }}
-            transition={{ type: "spring", stiffness: 220, damping: 26 }}
-            className="motion-aside flex-shrink-0 flex flex-col min-h-screen relative overflow-hidden"
-            style={{ 
-                background: 'var(--bg-secondary)', 
-                borderRight: '1px solid var(--border-color)',
-                zIndex: 10
-            }}
-        >
+    // Shared sidebar content
+    const sidebarContent = (
+        <>
             {/* Brand */}
             <div className="flex items-center gap-3 px-5 py-5 group" style={{ borderBottom: '1px solid var(--border-color)' }}>
                 <div className="relative flex-shrink-0">
@@ -113,6 +110,19 @@ export default function Sidebar() {
                         </motion.span>
                     )}
                 </AnimatePresence>
+
+                {/* Close button — mobile only */}
+                {onMobileClose && (
+                    <button
+                        onClick={onMobileClose}
+                        className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        aria-label="Close sidebar"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* Nav */}
@@ -242,6 +252,57 @@ export default function Sidebar() {
                     </AnimatePresence>
                 </button>
             </div>
-        </motion.aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* ── DESKTOP SIDEBAR (always visible on md+) ── */}
+            <motion.aside
+                animate={{ width: isCompact ? 76 : 256 }}
+                transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                className="motion-aside sidebar-desktop flex-shrink-0 flex flex-col min-h-screen relative overflow-hidden"
+                style={{ 
+                    background: 'var(--bg-secondary)', 
+                    borderRight: '1px solid var(--border-color)',
+                    zIndex: 10
+                }}
+            >
+                {sidebarContent}
+            </motion.aside>
+
+            {/* ── MOBILE SIDEBAR OVERLAY ── */}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            key="sidebar-backdrop"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={onMobileClose}
+                            className="sidebar-mobile-backdrop"
+                        />
+                        {/* Drawer */}
+                        <motion.aside
+                            key="sidebar-drawer"
+                            initial={{ x: -280 }}
+                            animate={{ x: 0 }}
+                            exit={{ x: -280 }}
+                            transition={{ type: "spring", stiffness: 280, damping: 30 }}
+                            className="sidebar-mobile flex flex-col"
+                            style={{ 
+                                background: 'var(--bg-secondary)', 
+                                borderRight: '1px solid var(--border-color)',
+                            }}
+                        >
+                            {sidebarContent}
+                        </motion.aside>
+                    </>
+                )}
+            </AnimatePresence>
+        </>
     );
 }

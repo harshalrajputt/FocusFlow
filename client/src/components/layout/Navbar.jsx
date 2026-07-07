@@ -13,7 +13,7 @@ const SHORTCUTS = [
     { label: "👥 Social Pods", path: "/pods", desc: "Mutual accountability groups", keywords: ["pods", "social", "friends", "group", "accountability", "invite"] }
 ];
 
-export default function Navbar() {
+export default function Navbar({ onToggleSidebar }) {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -258,12 +258,28 @@ export default function Navbar() {
                     WebkitBackdropFilter: 'blur(20px)',
                 }}
             >
-            {/* Left Greeting */}
-            <div className="min-w-0">
-                <p className="text-slate-800 dark:text-slate-100 font-semibold text-sm truncate">
-                    {greeting}, <span className="text-sky-500 font-bold">{user?.name?.split(" ")[0] || "there"}</span> 👋
-                </p>
-                <p className="text-slate-500 text-[11px] mt-0.5">{dateStr}</p>
+            {/* Left: Hamburger (mobile) + Greeting */}
+            <div className="flex items-center gap-3 min-w-0">
+                {/* Hamburger — mobile only */}
+                <button
+                    onClick={onToggleSidebar}
+                    className="navbar-hamburger flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer flex-shrink-0"
+                    style={{ background: 'rgba(100, 116, 139, 0.05)', border: '1px solid var(--border-color)' }}
+                    aria-label="Toggle sidebar"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+
+                <div className="min-w-0">
+                    <p className="text-slate-800 dark:text-slate-100 font-semibold text-sm truncate">
+                        {greeting}, <span className="text-sky-500 font-bold">{user?.name?.split(" ")[0] || "there"}</span> 👋
+                    </p>
+                    <p className="text-slate-500 text-[11px] mt-0.5 hidden sm:block">{dateStr}</p>
+                </div>
             </div>
 
             {/* Right Buttons */}
@@ -293,11 +309,11 @@ export default function Navbar() {
                     </svg>
                 </button>
 
-                {/* Download Extension Shortcut */}
+                {/* Download Extension Shortcut — hidden on mobile */}
                 <a
                     href={downloadUrl}
                     title="Download Chrome Extension Companion"
-                    className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30"
+                    className="hidden sm:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30"
                     style={{ background: 'rgba(100, 116, 139, 0.05)', border: '1px solid var(--border-color)' }}
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
