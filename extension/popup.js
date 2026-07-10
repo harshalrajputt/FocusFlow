@@ -28,13 +28,11 @@ let timerInterval = null;
 let isRunning = false;
 let startTimeStamp = null;
 
-// Initialize
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs && tabs[0] && tabs[0].url) {
-        const pageUrl = tabs[0].url;
-        if (pageUrl.includes("localhost") || pageUrl.includes("127.0.0.1")) {
-            BACKEND_URL = "http://localhost:5000/api";
-        }
+// Initialize — scan ALL open tabs to detect if a local dev server is running
+chrome.tabs.query({}, (tabs) => {
+    const hasLocalhost = tabs && tabs.some(tab => tab.url && (tab.url.includes("localhost") || tab.url.includes("127.0.0.1")));
+    if (hasLocalhost) {
+        BACKEND_URL = "http://localhost:5000/api";
     }
 
     chrome.storage.local.get(["token", "timerState", "customSettings", "allowedWorkSites"], (result) => {
@@ -86,6 +84,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         }
     });
 });
+
 
 // Authentication UI
 function showAuthScreen() {

@@ -2,13 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { isMobileDevice } from "../../utils/deviceUtils";
 
-/**
- * TiltContainer
- * -------------
- * Desktop : Full 3-D tilt with framer-motion spring physics.
- * Mobile  : Plain <div> — no JS listeners, no motion values, no repaints.
- *           3-D CSS transforms on mobile are very expensive and cause jank.
- */
+
 export default function TiltContainer({ children, className = "", style = {} }) {
     // On mobile, skip all the motion machinery entirely
     if (isMobileDevice()) {
