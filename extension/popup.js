@@ -28,12 +28,9 @@ let timerInterval = null;
 let isRunning = false;
 let startTimeStamp = null;
 
-// Initialize — scan ALL open tabs to detect if a local dev server is running
-chrome.tabs.query({}, (tabs) => {
-    const hasLocalhost = tabs && tabs.some(tab => tab.url && (tab.url.includes("localhost") || tab.url.includes("127.0.0.1")));
-    if (hasLocalhost) {
-        BACKEND_URL = "http://localhost:5000/api";
-    }
+// Initialize — read persisted backendUrl from storage (saved at login), fall back to tab-scan for first-time setup
+function initWithBackendUrl(resolvedUrl) {
+    BACKEND_URL = resolvedUrl;
 
     chrome.storage.local.get(["token", "timerState", "customSettings", "allowedWorkSites"], (result) => {
         // Load custom settings
@@ -83,8 +80,21 @@ chrome.tabs.query({}, (tabs) => {
             updateTimerDisplay();
         }
     });
-});
+}
 
+chrome.storage.local.get("savedBackendUrl", (res) => {
+    if (res.savedBackendUrl) {
+        // Use the URL that was saved at last login — no tab scanning needed
+        initWithBackendUrl(res.savedBackendUrl);
+    } else {
+        // First time: scan all open tabs to detect local dev environment
+        chrome.tabs.query({}, (tabs) => {
+            const hasLocalhost = tabs && tabs.some(tab => tab.url && (tab.url.includes("localhost") || tab.url.includes("127.0.0.1")));
+            const url = hasLocalhost ? "http://localhost:5000/api" : "https://focusflow-backend-liuf.onrender.com/api";
+            initWithBackendUrl(url);
+        });
+    }
+});
 
 // Authentication UI
 function showAuthScreen() {
@@ -122,7 +132,8 @@ loginBtn.addEventListener("click", async () => {
 
         const data = await response.json();
         if (data.success) {
-            chrome.storage.local.set({ token: data.token, user: data.user }, () => {
+            // Persist the backend URL used for login so future sessions never need re-detection
+            chrome.storage.local.set({ token: data.token, user: data.user, savedBackendUrl: BACKEND_URL }, () => {
                 showTimerScreen(data.token);
             });
         } else {
