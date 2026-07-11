@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { getTasks } from "../../services/taskService";
 import { getNotifications, markNotificationRead, clearNotification } from "../../services/notificationService";
 import { getPendingInvites, respondToInvite } from "../../services/podService";
+import ExtensionConsentModal from "./ExtensionConsentModal";
 
 const SHORTCUTS = [
     { label: "⚡ Focus Session Timer", path: "/focus", desc: "Start Pomodoro clock", keywords: ["focus", "timer", "pomodoro", "session", "work", "study"] },
@@ -47,6 +48,7 @@ export default function Navbar({ onToggleSidebar }) {
 
     // Pod Invites States
     const [pendingInvites, setPendingInvites] = useState([]);
+    const [showConsentModal, setShowConsentModal] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -310,17 +312,17 @@ export default function Navbar({ onToggleSidebar }) {
                 </button>
 
                 {/* Download Extension Shortcut — hidden on mobile */}
-                <a
-                    href={downloadUrl}
+                <button
+                    onClick={() => setShowConsentModal(true)}
                     title="Download Chrome Extension Companion"
-                    className="hidden sm:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30"
+                    className="hidden sm:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200 cursor-pointer hover:bg-sky-500/5 hover:border-sky-500/30 border-none bg-transparent"
                     style={{ background: 'rgba(100, 116, 139, 0.05)', border: '1px solid var(--border-color)' }}
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 16V8a2 2 0 0 0-2-2h-5a2 2 0 0 0-2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2z" />
                         <path d="M14 6V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2" />
                     </svg>
-                </a>
+                </button>
 
                 {/* Notifications Bell */}
                 <div className="relative" ref={notifRef}>
@@ -567,6 +569,11 @@ export default function Navbar({ onToggleSidebar }) {
                 </div>
             )}
         </header>
+        <ExtensionConsentModal
+            isOpen={showConsentModal}
+            onClose={() => setShowConsentModal(false)}
+            downloadUrl={downloadUrl}
+        />
         </>
     );
 }

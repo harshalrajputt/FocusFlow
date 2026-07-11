@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import FocusFlowIcon from "../assets/FocusFlowIcon.png";
 import { getProfile, upsertProfile, completeOnboarding } from "../services/profileService";
+import ExtensionConsentModal from "../components/layout/ExtensionConsentModal";
 
 const cardStyle = { background: '#0d1526', border: '1px solid rgba(148,163,184,0.07)', backdropFilter: 'blur(20px)' };
 const inputStyle = {
@@ -24,6 +25,7 @@ export default function Onboarding() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+    const [showConsentModal, setShowConsentModal] = useState(false);
 
     // Simplified Onboarding State
     const [stressFactor, setStressFactor] = useState("Procrastination");
@@ -65,8 +67,7 @@ export default function Onboarding() {
     }, [navigate, isEditMode]);
 
     const handleDownloadExtension = () => {
-        const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-        window.open(`${apiBase}/extension/download`, "_blank");
+        setShowConsentModal(true);
     };
 
     const handleNext = (e) => {
@@ -335,6 +336,14 @@ export default function Onboarding() {
                     </form>
                 )}
             </div>
+            <ExtensionConsentModal
+                isOpen={showConsentModal}
+                onClose={() => setShowConsentModal(false)}
+                downloadUrl={(() => {
+                    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+                    return apiBase.endsWith('/api') ? apiBase.substring(0, apiBase.length - 4) + "/api/download-extension" : apiBase + "/api/download-extension";
+                })()}
+            />
         </div>
     );
 

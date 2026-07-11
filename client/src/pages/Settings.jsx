@@ -7,6 +7,7 @@ import { getProfile, upsertProfile } from "../services/profileService";
 import { updateUserProfile, updateUserPassword } from "../services/authService";
 import { applyAppearanceSettings } from "../utils/theme";
 import ProtectedBlocksManager from "../components/schedule/ProtectedBlocksManager";
+import ExtensionConsentModal from "../components/layout/ExtensionConsentModal";
 
 const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' };
 const inputStyle = {
@@ -142,6 +143,7 @@ const Settings = () => {
     const [active, setActive] = useState(() => {
         return tabParam && ["profile", "lifestyle", "security", "notifications", "appearance", "extension"].includes(tabParam) ? tabParam : "profile";
     });
+    const [showConsentModal, setShowConsentModal] = useState(false);
 
     useEffect(() => {
         if (tabParam && ["profile", "lifestyle", "security", "notifications", "appearance", "extension"].includes(tabParam)) {
@@ -602,16 +604,16 @@ const Settings = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <a
-                                        href={downloadUrl}
-                                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-lg shadow-sky-500/15 whitespace-nowrap self-stretch sm:self-auto no-underline"
+                                    <button
+                                        onClick={() => setShowConsentModal(true)}
+                                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-lg shadow-sky-500/15 whitespace-nowrap self-stretch sm:self-auto border-none"
                                         style={{ background: 'var(--accent-gradient)' }}
                                         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px var(--accent-glow)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 16px var(--accent-glow)'; e.currentTarget.style.transform = ''; }}
                                     >
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                         Download Blocker Extension
-                                    </a>
+                                    </button>
                                 </div>
 
                                 <div className="space-y-4">
@@ -692,9 +694,14 @@ const Settings = () => {
                 </div>
             </div>
             
-            <Toast toast={toast} />
-        </div>
-    );
-};
+            <ExtensionConsentModal
+                                                isOpen={showConsentModal}
+                                                onClose={() => setShowConsentModal(false)}
+                                                downloadUrl={downloadUrl}
+                                            />
+                                            <Toast toast={toast} />
+                                        </div>
+                                    );
+                                };
 
 export default Settings;
