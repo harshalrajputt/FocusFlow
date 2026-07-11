@@ -44,79 +44,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        <Route
-          path="/"
-          element={<Navigate to="/login" />}
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-
-        <Route
-          path="/forgot-password"
-          element={<ForgotPassword />}
-        />
-
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route element={<ProtectedRoute />}>
-          <Route
-            path="/onboarding"
-            element={<Onboarding />}
-          />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<MainLayout />}>
-
-            <Route
-              path="/dashboard"
-              element={<Dashboard />}
-            />
-
-            <Route
-              path="/tasks"
-              element={<Tasks />}
-            />
-
-            <Route
-              path="/focus"
-              element={<FocusSession />}
-            />
-
-            <Route
-              path="/analytics"
-              element={<Analytics />}
-            />
-
-            <Route
-              path="/settings"
-              element={<Settings />}
-            />
-
-            <Route
-              path="/schedule"
-              element={<Schedule />}
-            />
-
-            <Route
-              path="/pods"
-              element={<Pods />}
-            />
-
-            <Route
-              path="/flashcards"
-              element={<Flashcards />}
-            />
-
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/focus" element={<FocusSession />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/pods" element={<Pods />} />
+            <Route path="/flashcards" element={<Flashcards />} />
           </Route>
         </Route>
-
         <Route path="*" element={<NotFound />} />
-
       </Routes>
     </BrowserRouter>
   );

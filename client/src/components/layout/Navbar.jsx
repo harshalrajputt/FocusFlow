@@ -50,38 +50,32 @@ export default function Navbar({ onToggleSidebar }) {
     const [pendingInvites, setPendingInvites] = useState([]);
     const [showConsentModal, setShowConsentModal] = useState(false);
 
+    // Load & Poll Notifications + Invites
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const fetchInvites = () => {
+        const fetchAll = () => {
+            getNotifications().then(res => {
+                if (res.data?.success) setNotifications(res.data.notifications || []);
+            }).catch(err => console.error("Notifications fetch failed", err));
+
             getPendingInvites().then(res => {
                 setPendingInvites(res.data.invites || []);
-            }).catch(err => {
-                console.error("Error fetching invites in Navbar:", err);
-            });
+            }).catch(err => console.error("Error fetching invites:", err));
         };
 
-        fetchInvites();
-        const interval = setInterval(fetchInvites, 30000);
+        fetchAll();
+        const interval = setInterval(fetchAll, 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const handleAcceptInvite = async (inviteId) => {
+    const handleInviteResponse = async (inviteId, accept) => {
         try {
-            await respondToInvite(inviteId, true);
+            await respondToInvite(inviteId, accept);
             setPendingInvites(prev => prev.filter(i => i._id !== inviteId));
         } catch (e) {
-            console.error("Error accepting invite:", e);
-        }
-    };
-
-    const handleDeclineInvite = async (inviteId) => {
-        try {
-            await respondToInvite(inviteId, false);
-            setPendingInvites(prev => prev.filter(i => i._id !== inviteId));
-        } catch (e) {
-            console.error("Error declining invite:", e);
+            console.error("Error responding to invite:", e);
         }
     };
 
@@ -154,25 +148,6 @@ export default function Navbar({ onToggleSidebar }) {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Load & Poll Notifications
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const fetchNotifs = () => {
-            getNotifications().then(res => {
-                if (res.data && res.data.success) {
-                    setNotifications(res.data.notifications || []);
-                }
-            }).catch((err) => {
-                console.error("Notifications fetch failed", err);
-            });
-        };
-
-        fetchNotifs();
-        const interval = setInterval(fetchNotifs, 30000); // Poll every 30 seconds
-        return () => clearInterval(interval);
-    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -214,17 +189,13 @@ export default function Navbar({ onToggleSidebar }) {
     const formatTime = (dateStr) => {
         try {
             const date = new Date(dateStr);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
+            const diffMins = Math.floor((new Date() - date) / 60000);
             if (diffMins < 1) return "Just now";
             if (diffMins < 60) return `${diffMins}m ago`;
             const diffHrs = Math.floor(diffMins / 60);
             if (diffHrs < 24) return `${diffHrs}h ago`;
             return date.toLocaleDateString();
-        } catch (e) {
-            return "Just now";
-        }
+        } catch { return "Just now"; }
     };
 
     return (
@@ -237,13 +208,13 @@ export default function Navbar({ onToggleSidebar }) {
                     </span>
                     <div className="flex gap-2 flex-shrink-0">
                         <button
-                            onClick={() => handleDeclineInvite(pendingInvites[0]._id)}
+                            onClick={() => handleInviteResponse(pendingInvites[0]._id, false)}
                             className="bg-sky-600 hover:bg-sky-700 px-2 py-0.5 rounded transition cursor-pointer text-white"
                         >
                             Decline
                         </button>
                         <button
-                            onClick={() => handleAcceptInvite(pendingInvites[0]._id)}
+                            onClick={() => handleInviteResponse(pendingInvites[0]._id, true)}
                             className="bg-white text-sky-600 hover:bg-sky-50 px-2 py-0.5 rounded transition cursor-pointer"
                         >
                             Accept

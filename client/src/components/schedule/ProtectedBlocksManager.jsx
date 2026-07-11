@@ -48,68 +48,39 @@ export default function ProtectedBlocksManager({ onUpdateSuccess }) {
         );
     };
 
+    const saveBlocks = async (updatedBlocks, successMsg) => {
+        setSaving(true);
+        setError("");
+        setSuccess("");
+        try {
+            await upsertProfile({ protectedBlocks: updatedBlocks });
+            setBlocks(updatedBlocks);
+            setSuccess(successMsg);
+            await regenerateSchedule();
+            if (onUpdateSuccess) onUpdateSuccess();
+            setTimeout(() => setSuccess(""), 4000);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to update protected blocks.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleAddBlock = async (e) => {
         e.preventDefault();
         if (!name.trim() || !start || !end) {
             setError("All fields are required.");
             return;
         }
-
-        setSaving(true);
-        setError("");
-        setSuccess("");
-
         const newBlock = { name: name.trim(), start, end, repeat, isLocked: true };
-        const updatedBlocks = [...blocks, newBlock];
-
-        try {
-            await upsertProfile({ protectedBlocks: updatedBlocks });
-            setBlocks(updatedBlocks);
-            setSuccess("Habit protected! Regenerating baseline...");
-            
-            // Auto regenerate schedule so study blocks immediately avoid the new leisure habit
-            await regenerateSchedule();
-            if (onUpdateSuccess) onUpdateSuccess();
-
-            // Reset form
-            setName("");
-            setStart("");
-            setEnd("");
-            setRepeat(DAYS_OF_WEEK);
-            
-            setTimeout(() => setSuccess(""), 4000);
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to add protected block.");
-        } finally {
-            setSaving(false);
-        }
+        await saveBlocks([...blocks, newBlock], "Habit protected! Regenerating baseline...");
+        // Reset form on success
+        if (!error) { setName(""); setStart(""); setEnd(""); setRepeat(DAYS_OF_WEEK); }
     };
 
     const handleDeleteBlock = async (indexToDelete) => {
-        if (!window.confirm("Are you sure you want to delete this protected activity?")) {
-            return;
-        }
-
-        setSaving(true);
-        setError("");
-        setSuccess("");
-
-        const updatedBlocks = blocks.filter((_, idx) => idx !== indexToDelete);
-
-        try {
-            await upsertProfile({ protectedBlocks: updatedBlocks });
-            setBlocks(updatedBlocks);
-            setSuccess("Block deleted. Regenerating baseline...");
-            
-            await regenerateSchedule();
-            if (onUpdateSuccess) onUpdateSuccess();
-            
-            setTimeout(() => setSuccess(""), 4000);
-        } catch (err) {
-            setError("Failed to delete block.");
-        } finally {
-            setSaving(false);
-        }
+        if (!window.confirm("Are you sure you want to delete this protected activity?")) return;
+        await saveBlocks(blocks.filter((_, idx) => idx !== indexToDelete), "Block deleted. Regenerating baseline...");
     };
 
     if (loading) {

@@ -1,17 +1,5 @@
-import axios from "axios";
-
-const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-});
-
-// Attach JWT token to every request automatically
-API.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
+import createAPI from "./apiClient";
+const API = createAPI();
 
 // ─── Focus Sessions ───────────────────────────────────────────────────────────
 export const logFocusSession  = (data)   => API.post("/focus", data);
@@ -20,6 +8,5 @@ export const getFocusSummary  = ()       => API.get("/focus/summary");
 export const updateSessionFeedback = (sessionId, data) => API.put(`/focus/${sessionId}/feedback`, data);
 
 // ─── Real-time Presence ───────────────────────────────────────────────────────
-// active: boolean, taskLabel: string (shown to pod members)
 export const updatePresence = (active, taskLabel = "") =>
     API.put("/focus/presence", { active, taskLabel });

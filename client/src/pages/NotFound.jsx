@@ -1,13 +1,7 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
 
 export default function NotFound() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        setIsLoggedIn(!!token);
-    }, []);
+    const isLoggedIn = !!localStorage.getItem("token");
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#030817] text-white p-6 relative overflow-hidden font-sans">

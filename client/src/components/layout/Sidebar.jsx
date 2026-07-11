@@ -64,14 +64,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
     }, [location.pathname, location.search]);
 
     const isItemActive = (item) => {
-        const itemPath = item.path;
-        const currentPath = location.pathname + location.search;
-        
-        if (itemPath.includes('?')) {
-            return currentPath === itemPath;
-        } else {
-            return location.pathname === itemPath && !location.search.includes('tab=');
-        }
+        return item.path.includes('?')
+            ? (location.pathname + location.search) === item.path
+            : location.pathname === item.path && !location.search.includes('tab=');
     };
 
     const initials = user?.name

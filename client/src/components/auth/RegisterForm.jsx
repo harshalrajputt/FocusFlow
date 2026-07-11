@@ -50,6 +50,8 @@ export default function RegisterForm() {
     };
     const blurStyle = (e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = ''; };
 
+    const eyeBtnStyle = { position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) { setError("Passwords do not match."); return; }
@@ -128,16 +130,7 @@ export default function RegisterForm() {
                         type="button"
                         onClick={() => setShowPwd(!showPwd)}
                         className="text-slate-600 hover:text-slate-300 transition-colors"
-                        style={{
-                            position: 'absolute',
-                            right: '14px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
+                        style={eyeBtnStyle}
                     >
                         <EyeIcon open={showPwd} />
                     </button>
@@ -170,16 +163,7 @@ export default function RegisterForm() {
                         type="button"
                         onClick={() => setShowConfirm(!showConfirm)}
                         className="text-slate-600 hover:text-slate-300 transition-colors"
-                        style={{
-                            position: 'absolute',
-                            right: '14px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
+                        style={eyeBtnStyle}
                     >
                         <EyeIcon open={showConfirm} />
                     </button>

@@ -24,8 +24,7 @@ export default function ProtectedRoute({ children }) {
 
   // If onboarding is completed and we try to go to /onboarding, redirect to /dashboard
   // unless we are explicitly in edit mode (e.g. /onboarding?edit=true)
-  const isEditMode = new URLSearchParams(location.search).get("edit") === "true";
-  if (onboardingCompleted && location.pathname === "/onboarding" && !isEditMode) {
+  if (onboardingCompleted && location.pathname === "/onboarding" && new URLSearchParams(location.search).get("edit") !== "true") {
     return <Navigate to="/dashboard" replace />;
   }
 

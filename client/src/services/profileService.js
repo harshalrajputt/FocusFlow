@@ -1,26 +1,6 @@
-import axios from "axios";
+import createAPI from "./apiClient";
+const API = createAPI("profile");
 
-const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/profile`,
-});
-
-// Attach JWT token to every request automatically
-API.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-export const getProfile = () => {
-    return API.get("/");
-};
-
-export const upsertProfile = (profileData) => {
-    return API.put("/", profileData);
-};
-
-export const completeOnboarding = () => {
-    return API.put("/complete");
-};
+export const getProfile = () => API.get("/");
+export const upsertProfile = (profileData) => API.put("/", profileData);
+export const completeOnboarding = () => API.put("/complete");
