@@ -15,6 +15,7 @@ const logSession = async (req, res) => {
             taskId,
             sessionType,
             duration,
+            scheduledDuration,
             startTime,
             endTime,
             completed,
@@ -42,6 +43,7 @@ const logSession = async (req, res) => {
             taskId: taskId || null,
             sessionType,
             duration,
+            scheduledDuration: scheduledDuration || null,
             startTime,
             endTime,
             completed: isCompleted,
@@ -272,6 +274,149 @@ const logSession = async (req, res) => {
                 });
             } catch (presenceErr) {
                 console.error("Error clearing presence:", presenceErr);
+            }
+        }
+
+        // --- HALF-XP for INCOMPLETE Focus sessions ---
+        if (!isCompleted && sessionType === "Focus" && duration >= 60) {
+            try {
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+
+                const completedTodayCount = await FocusSession.countDocuments({
+                    userId: req.user.id,
+                    sessionType: "Focus",
+                    completed: true,
+                    startTime: { $gte: startOfToday }
+                });
+
+                // Half XP: same formula on elapsed duration, then halved
+                let xpEarned = 0;
+                if (completedTodayCount <= 10) {
+                    xpEarned = Math.floor(Math.floor(duration / 150) / 2);
+                }
+
+                // Update User XP & Streak
+                const user = await User.findById(req.user.id);
+                if (user && xpEarned > 0) {
+                    const todayStr = new Date().toLocaleDateString("en-CA");
+                    if (user.lastActiveDate !== todayStr) {
+                        const yesterdayStr = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString("en-CA");
+                        if (user.lastActiveDate === yesterdayStr) {
+                            user.streak += 1;
+                        } else {
+                            user.streak = 1;
+                        }
+                        user.lastActiveDate = todayStr;
+                    }
+                    user.xp = (user.xp || 0) + xpEarned;
+                    await user.save();
+
+                    // Log incomplete session to pod activity + rivalry
+                    const userPods = await Pod.find({ "members.userId": req.user.id });
+                    for (const pod of userPods) {
+                        const minMinutes = pod.minSessionDuration !== undefined ? pod.minSessionDuration : 10;
+                        const durationInMinutes = duration / 60;
+                        if (durationInMinutes < minMinutes) continue;
+
+                        // Challenges
+                        if (xpEarned > 0) {
+                            pod.challenges.forEach(challenge => {
+                                if (challenge.status === "active") {
+                                    const currentContrib = challenge.progress.get(req.user.id) || 0;
+                                    challenge.progress.set(req.user.id, currentContrib + xpEarned);
+                                    let totalContributed = 0;
+                                    challenge.progress.forEach((val) => { totalContributed += val; });
+                                    if (totalContributed >= challenge.targetXP) {
+                                        challenge.status = "completed";
+                                        const endAct = new PodActivity({
+                                            podId: pod._id,
+                                            userId: req.user.id,
+                                            type: "challenge",
+                                            message: `The group challenge "${challenge.title}" has been COMPLETED! 🎉`
+                                        });
+                                        endAct.save().catch(err => console.error("Error saving challenge complete log:", err));
+                                    }
+                                }
+                            });
+                        }
+
+                        await pod.save();
+
+                        // Rivalry
+                        if (xpEarned > 0) {
+                            const activeRivalry = await PodRivalry.findOne({
+                                $or: [
+                                    { challengerPodId: pod._id, status: "active" },
+                                    { challengedPodId: pod._id, status: "active" }
+                                ]
+                            });
+                            if (activeRivalry) {
+                                const isChallenger = activeRivalry.challengerPodId.toString() === pod._id.toString();
+                                if (isChallenger) {
+                                    activeRivalry.challengerXP += xpEarned;
+                                } else {
+                                    activeRivalry.challengedXP += xpEarned;
+                                }
+                                await activeRivalry.save();
+                                emitToPod(req.io, activeRivalry.challengerPodId.toString(), "rivalry:update", {
+                                    rivalryId: activeRivalry._id,
+                                    challengerXP: activeRivalry.challengerXP,
+                                    challengedXP: activeRivalry.challengedXP
+                                });
+                                emitToPod(req.io, activeRivalry.challengedPodId.toString(), "rivalry:update", {
+                                    rivalryId: activeRivalry._id,
+                                    challengerXP: activeRivalry.challengerXP,
+                                    challengedXP: activeRivalry.challengedXP
+                                });
+                            }
+                        }
+
+                        // Activity feed
+                        const elapsedMin = Math.round(duration / 60);
+                        const plannedMin = scheduledDuration ? Math.round(scheduledDuration / 60) : elapsedMin;
+                        let taskDetail = "a task";
+                        let share = true;
+                        if (taskId) {
+                            const taskObj = await Task.findById(taskId);
+                            if (taskObj) {
+                                share = taskObj.shareWithPod !== false;
+                                if (share) taskDetail = `"${taskObj.title}"`;
+                            }
+                        }
+                        const feedMessage = share
+                            ? `${user.name} partially completed a session for ${taskDetail} (${elapsedMin}/${plannedMin} min, +${xpEarned} XP)`
+                            : `${user.name} partially completed a private session (${elapsedMin}/${plannedMin} min, +${xpEarned} XP)`;
+
+                        const act = new PodActivity({
+                            podId: pod._id,
+                            userId: req.user.id,
+                            type: "completion",
+                            message: feedMessage
+                        });
+                        await act.save();
+                    }
+                }
+
+                // Clear presence
+                try {
+                    const userPods = await Pod.find({ "members.userId": req.user.id }).select("_id");
+                    await User.findByIdAndUpdate(req.user.id, {
+                        activeSessionStart: null,
+                        activeTaskLabel: ""
+                    });
+                    userPods.forEach(pod => {
+                        emitToPod(req.io, pod._id.toString(), "presence:update", {
+                            userId: req.user.id,
+                            activeSessionStart: null,
+                            activeTaskLabel: ""
+                        });
+                    });
+                } catch (presenceErr) {
+                    console.error("Error clearing presence (incomplete):", presenceErr);
+                }
+            } catch (incompleteErr) {
+                console.error("Error in incomplete session gamification hook:", incompleteErr);
             }
         }
 

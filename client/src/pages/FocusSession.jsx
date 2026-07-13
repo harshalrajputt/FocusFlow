@@ -487,6 +487,7 @@ const FocusSession = () => {
                     taskId: selectedTaskId || null,
                     sessionType: activeSession.sessionType,
                     duration: activeSession.duration,
+                    scheduledDuration: activeSession.scheduledDuration || null,
                     startTime: activeSession.startTime,
                     endTime: activeSession.endTime,
                     completed: activeSession.completed,
@@ -610,6 +611,7 @@ const FocusSession = () => {
             setPendingSession({
                 sessionType: currentMode.label,
                 duration: elapsed,
+                scheduledDuration: total, // full planned duration
                 startTime: startTime,
                 endTime: end,
                 completed: false
@@ -1108,23 +1110,63 @@ const FocusSession = () => {
                             };
 
                             const durationMin = Math.round(session.duration / 60);
+                            const scheduledMin = session.scheduledDuration
+                                ? Math.round(session.scheduledDuration / 60)
+                                : null;
+                            const isIncomplete = session.completed === false && session.sessionType === "Focus";
+
+                            // XP display for completed sessions
+                            const xpEarned = session.sessionType === "Focus"
+                                ? (isIncomplete
+                                    ? Math.floor(Math.floor(session.duration / 150) / 2)
+                                    : Math.min(10, Math.floor(session.duration / 150)))
+                                : 0;
 
                             return (
                                 <div 
                                     key={session._id || idx}
-                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] hover:border-sky-500/20 transition-all gap-3"
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3"
+                                    style={{
+                                        background: 'var(--bg-primary)',
+                                        borderColor: isIncomplete ? 'rgba(245,158,11,0.25)' : 'var(--border-color)'
+                                    }}
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="text-lg">
-                                            {session.sessionType === "Focus" ? "⚡" : "☕"}
+                                            {session.sessionType === "Focus" ? (isIncomplete ? "⚠️" : "⚡") : "☕"}
                                         </span>
                                         <div>
-                                            <p className="text-xs font-bold text-[var(--text-primary)]">
-                                                {session.sessionType === "Focus" ? `Focus: ${durationMin}m` : `Break: ${durationMin}m`}
-                                            </p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="text-xs font-bold text-[var(--text-primary)]">
+                                                    {session.sessionType === "Focus"
+                                                        ? (scheduledMin && isIncomplete
+                                                            ? `Focus: ${durationMin}m / ${scheduledMin}m`
+                                                            : `Focus: ${durationMin}m`)
+                                                        : `Break: ${durationMin}m`
+                                                    }
+                                                </p>
+                                                {session.sessionType === "Focus" && (
+                                                    isIncomplete ? (
+                                                        <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                                                            style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
+                                                            Incomplete
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                                                            style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>
+                                                            Completed
+                                                        </span>
+                                                    )
+                                                )}
+                                            </div>
                                             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                                 🎯 Task: <span className="font-semibold text-[var(--text-secondary)]">{session.taskId?.title || "General Focus"}</span>
                                             </p>
+                                            {session.sessionType === "Focus" && xpEarned > 0 && (
+                                                <p className="text-[9px] mt-0.5 font-bold" style={{ color: isIncomplete ? '#f59e0b' : '#22c55e' }}>
+                                                    +{xpEarned} XP{isIncomplete ? " (half)" : ""}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="sm:text-right flex sm:flex-col justify-between items-center sm:items-end gap-1">

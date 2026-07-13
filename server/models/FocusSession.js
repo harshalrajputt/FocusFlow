@@ -18,8 +18,12 @@ const focusSessionSchema = new mongoose.Schema(
             required: true,
         },
         duration: {
-            type: Number, // duration in seconds
+            type: Number, // actual duration in seconds (elapsed time)
             required: true,
+        },
+        scheduledDuration: {
+            type: Number, // originally planned session duration in seconds
+            default: null,
         },
         startTime: {
             type: Date,
